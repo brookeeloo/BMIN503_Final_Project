@@ -1,6 +1,6 @@
 ---
 title: "BMIN503/EPID600 Project Template"
-author: "Your Name"
+author: "Brooke Luo"
 output: 
   html_document:
     toc: false 
@@ -23,10 +23,202 @@ In the first paragraph, describe the problem addressed, its significance, and so
 
 In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff.
 
+###Methods Overview:
+Libraries used:
+```{r}
+#update all librarys; remove all variables
+rm(list = ls())  #Start with a clean slate
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+```
+
+1. Clean up the data first (numbers are numbers, dates are dates etc)
+```{r}
+#upload and configure the data
+#filename: MDrptEtc_20181027_FY17on
+data.all.admission <- read.csv(file="MDrptEtc_20181027_FY17on.csv", header=TRUE)
+data.ED.admission <-read.csv(file="MDrptWithBedReqandAdmitTeam_20181104_FY17on.csv", header=TRUE)
+
+#combine column...based on mrn and date?
+```
+
+2. Make new columns with cleaned up data - Diagnosis, etc
+```{r}
+
+```
+
+
+3. Trends:
+
+
+
+
+Basket of evaluations for now:
+```{r}
+
+
+#upload and configure the data
+#filename: MDrptEtc_20181027_FY17on
+admissions.data <- read.csv(file="MDrptEtc_20181027_FY17on.csv", header=TRUE)
+ED.data<-read.csv(file="MDrptWithBedReqandAdmitTeam_20181104_FY17on.csv", header=TRUE)
+
+#checking header names
+a=colnames(admissions.data)
+b=colnames(ED.data)
+names<-cbind(a,b)
+
+#rename column headings
+admissions.data.renamed <- rename(admissions.data,
+                                  ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                                  BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                                  MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                                  MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                                  ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #proxy time pt arrived on the floor
+                                  DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                                  MRN = PAT_MRN_ID,  #Identifier
+                                  TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                                  INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                                  INPATIENT_TEAM=CENSUS_ADMIT_SERVCIE,  #inpatient team who admitted the patient
+                                   )
+
+#ED.data.renamed <- rename(ED.data, diagnosis=ACCT_ADMIT_DX_NM, mrn=PAT_MRN_ID,  admitted_from=FROM_DEPT, admit_floor=CENSUS_ADMIT_DEPT, time_bed_request = MRFT_BED_REQ_DT_TM, time_md_paged=MD_PAGED_DT_TM, treatment_team_start_time = ADMIT_TREATMENT_START_DT, time_bed_assigned = BED_ASSIGN_DT_TM,  time_md_report=MD_RPT_DT_TM, ed_team=ED_DISCH_TEAM, admit_service_team=CENSUS_ADMIT_SERVCIE, time_of_arrival=HOSP_ADMIT_DT, time_of_admission=CENSUS_ADMIT_TM )
+#wish list:  bed assignment time; Inpatient team
+
+#calculations
+# need time between bed request and MD paged, time between MD paged and MD report, time between Bed request and MD report, time to bed request and patient hitting the floor (probably the actual outcome measure)
+#Things that seem to be missing:demographics of the patient, age, # of medications, problems on the problem list, # of labs ordered
+#could complexity be a proxy measure by duration of admission?
+#new.columns.data
+
+##quick code to convert to days of the week!!!!  cool
+#crime_date = as.Date(ymd_hms(ED.data.renamed$time_bed_assigned))
+#summary(crime_date)
+#crime_date_dotw=weekdays(crime_date)
+#hist(crime_date, breaks="month")
+
+
+#convert time data to be computable
+col1 <-ymd_hms(admissions.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
+col2 <-ymd_hms(admissions.data.renamed$time_md_paged)
+col3 <-ymd_hms(admissions.data.renamed$time_md_report)
+col4 <-ymd_hms(admissions.data.renamed$time_of_admission)
+
+#calculate durations between points of interest
+duration.bedrequesttomdpage <-difftime(col2,col1,units="min")  #duration between time of bed request to MD page 
+duration.mdpagetomdreport <-difftime(col3,col2, units="min")  #duration between MD paged to MD report given
+duration.mdreporttotime_of_admission <-difftime(col4,col3, units="min")  #duration between MD reported to Time of Admission
+total.duration<-difftime(col4,col1, units="min") #duration between time MD was paged to Time of Admission
+#add columns to data table
+data.with.durations<-cbind(admissions.data.renamed, duration.bedrequesttomdpage, duration.mdpagetomdreport, duration.mdreporttotime_of_admission, total.duration)
+summary(a)
+
+#look at ED data set only
+col1a <-ymd_hms(ED.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
+col2a <-ymd_hms(ED.data.renamed$time_bed_assigned) #time of bed assignment
+col3a<-ymd_hms(ED.data.renamed$time_md_paged)#time of MD paged
+col4a<-ymd_hms(ED.data.renamed$time_md_report) #Time MD report was given
+col5a <-ymd_hms(ED.data.renamed$time_of_admission)  #time of admission on inpatient
+
+duration21<-difftime(col2a,col1a, units="min") #time between bed assigned (2) and bed request (1)
+duration_pagetorequest<-difftime(col3a,col1a, units="min")  #time between MD page and bed request
+duration32<-difftime(col3a,col2a, units="min") #time between MD paged and bed assigned;  if negative, specialty team was consulted (and button was clicked, but not the time that the team actually signed out)
+duration42<-difftime(col4a,col2a, units="min") # time between MD report and bed assigned
+duration41<-difftime(col4a,col1a, units="min")  #total duration between time of bed request to MD Report
+duration54<-difftime(col5a,col4a, units="min")  #total duration between MD report to bed admission time
+n<-duration54<(-0)
+summary(n)
+ED.data.with.durations<-cbind(duration32, duration42, poop, duration_pagetorequest, ED.data.renamed)
+
+
+#total duration from bed request to time of admission on the floor
+#errors:  large durations due to being admitted to PICU after being admitted to floor or just an error in general
+#find the outliers here
+poop<- difftime(col5a,col1a,unit="min")
+which(poop>1000)
+a=ED.data.with.durations[281,]
+str(a)
+str(poop)
+mean(poop[1:37241], na.rm=TRUE)
+median(poop[1:37241], na.rm=TRUE)
+
+#plots
+ggplot(data=ED.data.with.durations,aes(x=year(col1a), y=poop)) +
+        geom_boxplot()
+
+#NOTE:  bed request to MD report shoudl be the time outcome measure;  the bed request is when teh patient is deemed medically safe to initiate finding a bed.  MD report is when the MD has given the report.  The time between Bed request to MD page is loaded with errors (1/3 of the time MD paged is referring to when consult team is paged, other time is missing), the time between MD 
+
+#Filter to only see ED admissions
+ed.admissions <- data.with.durations %>%
+  filter(admitted_from != "ED") %>%
+  group_by(hour(ymd_hms(time_of_admission))) %>%
+  summarize(count=n()) %>%
+  arrange(desc(count))
+poop1 <- cbind(ed.admissions[,1], ed.admissions[,2]*100/sum(ed.admissions[,2]))
+
+month(ymd_hms(data.with.durations$time_bed_request))
+
+# Total count of all admissions from ED:: GROUP BY TREATMENT TEAM
+num.ed.admissions <- ED.data.with.durations %>%
+  filter(admitted_from=="ED") %>%
+  group_by(ADMIT_TREATMENT_TEAM) %>%
+  summarize(count=n())%>%
+  arrange(desc(count)) 
+a=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
+
+## Total count of all admissions from ED: Group by floor
+num.ed.admissions <- ED.data.with.durations %>%
+  filter(admitted_from=="ED") %>%
+  group_by(admit_floor) %>%
+  summarize(count=n())%>%
+  arrange(desc(count)) 
+b=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
+
+## Total count of all admissions from ED: Group by service
+num.ed.admissions <- ED.data.with.durations %>%
+  filter(admitted_from=="ED") %>%
+  group_by(admit_service_team) %>%
+  summarize(count=n())%>%
+  arrange(desc(count)) 
+c=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]))
+#54% of all admissions at CHOP come from the ED
+
+#Top diagnoses admitted from ED
+admission.diagnoses<- data.with.durations %>%
+  filter(admitted_from=="ED") %>%
+  group_by(diagnosis) %>%
+  summarize(count=n()) %>%
+  arrange(desc(count)) 
+
+#If the diagnosis has the word asthma in it, then rename diagnosis as asthma
+#The top 10 admission diagnoses included - fever, dyspnea, acute bronchiolitis, vomiting, convulsions, abdominal pain, appendicitis, asthma, ARDS, pneumonia, dehydration, wheezing, SS crisis, headache, cough.  But asthma shows up in a bunch of the various diagnoses.
+
+#graphs
+#X=
+
+# graph 2: X - floor they were admitted to, Y duration
+# graph 3: 
+# when bed gets requested and then changed
+
+  
+#counts of admissions in 1 day, overlaid with admission duration time 
+#filter
+# look only at kids admitted from the ED
+
+```
+
 
 ### Methods
 In the first paragraph, describe the data used and general methodological approach. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why. 
 
+```{r}
+#clean up the data:
+# Basic graph plots of time to admission from ED to arrival on inpatient
+# graph 2: X - floor they were admitted to, Y duration
+# graph 3: 
+```
 
 ### Results
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
