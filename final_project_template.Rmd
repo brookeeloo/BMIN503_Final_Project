@@ -19,9 +19,10 @@ In this section, give a brief a description of your project and its goal, what d
 
 
 ### Introduction 
-In the first paragraph, describe the problem addressed, its significance, and some background to motivate the problem.
+The Emergency Department (ED) is an integral part of the hospital admission process accounting for nearly half of all hospital admissions in the United States. However, admission wait times vary in the ED and is influenced by many variables throughout the hospital. At Children's Hospital of Philadelphia, we have taken an iterative approach using quality improvement methodologies and the electronic health record (EHR) to streamline the admission process and improve communication from ED to IP staff, however variation in transfer times still remain. Delays in ED to IP transfer of care can impact hospital resources, increase ED crowding, and decrease patient satisfaction. These variables are difficult to identify and can vary throughout the year making it difficult to know where to focus quality improvement (QI) efforts. Historically, QI methods involve creating a diagram (ie. driver diagram, cause and effect diagram) that captures key elements of a specific workflow, from which a list of actionable items is generated. The Pareto Principle is then applied to determine which actionable items can improve the outcome the most. These changes then undergo evaluation through a Plan-Do-Study-Act cycle with the hopes of finding measurable improvements to quality of patient care. In a complex outcome such as ED admission wait times, it is influenced by many factors throughout the hospital making QI efforts difficult to determine. With the skills learned in class, I hope to introduce a novel approach to QI by using machine learning to determine the key drivers that influence our hospital’s ED admission wait times, and use those identified variables to determine QI efforts.
+Objective: To determine if 1) machine learning methods can provide a framework for finding variables that significantly influence ED admission wait times and therefore direct QI efforts. 2) to determine if machine learning is a valid approach to use to predict ED wait times.
 
-In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff.
+In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff #i feel like I answered this already in the above paragraph.
 
 ###Methods Overview:
 Libraries used:
@@ -39,19 +40,104 @@ library(lubridate)
 ```{r}
 #upload and configure the data
 #filename: MDrptEtc_20181027_FY17on
+rm(list=ls())
 data.all.admission <- read.csv(file="MDrptEtc_20181027_FY17on.csv", header=TRUE)
 data.ED.admission <-read.csv(file="MDrptWithBedReqandAdmitTeam_20181104_FY17on.csv", header=TRUE)
+
+head(data.ED.admission)
 
 #combine column...based on mrn and date?
 ```
 
+
+
 2. Make new columns with cleaned up data - Diagnosis, etc
 ```{r}
 
+head(data.all.admission)
+all.admits.r <- rename(data.all.admission,
+                                  ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                                  ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
+                                  BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                                  MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                                  MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                                  ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
+                                  DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                                  MRN = PAT_MRN_ID,  #patient Identifier
+                                  TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                                  INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                                  INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
+                                  )
+
+head(data.ED.admission)
+ED.admits.r<- rename(data.ED.admission,
+                              ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                              ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
+                              BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                              BED_ASSIGNED_DATE_TIME = BED_ASSIGN_DT_TM,  #time bed was assigned in the inpatient unit 
+                              MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                              MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                              TEAM_ASSIGNED_DATE_TIME=ADMIT_TREATMENT_START_DT, #time inpatient team assigned themselves to treatment team
+                              ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
+                              DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                              MRN = PAT_MRN_ID,  #patient Identifier
+                              TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                              INPATIENT_TEAM=ADMIT_TREATMENT_TEAM, #team who take care of the patient
+                              INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                              INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
+                                )
+
+
+
+ED.clean<-ED.admits.r %>%
+  select(MRN,ARRIVAL_DATE_TIME, BED_REQUEST_DATE_TIME, BED_ASSIGNED_DATE_TIME, MD_PAGED_DATE_TIME, MD_REPORT_DATE_TIME, TEAM_ASSIGNED_DATE_TIME, ADMIT_INPATIENT_DATE_TIME, DIAGNOSIS,TEAM_ED,INPATIENT_FLOOR,INPATIENT_TEAM, INPATIENT_SERVICE)
+
+#Convert all time variables into a readable time format using library lubridate
+ED.clean$ARRIVAL_DATE_TIME<-ymd_hms(ED.clean$ARRIVAL_DATE_TIME)
+ED.clean$BED_REQUEST_DATE_TIME<-ymd_hms(ED.clean$BED_REQUEST_DATE_TIME)
+ED.clean$BED_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$BED_ASSIGNED_DATE_TIME)
+ED.clean$MD_PAGED_DATE_TIME<-ymd_hms(ED.clean$MD_PAGED_DATE_TIME)
+ED.clean$MD_REPORT_DATE_TIME<-ymd_hms(ED.clean$MD_REPORT_DATE_TIME)
+ED.clean$TEAM_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$TEAM_ASSIGNED_DATE_TIME)
+ED.clean$ADMIT_INPATIENT_DATE_TIME<-ymd_hms(ED.clean$ADMIT_INPATIENT_DATE_TIME)
+
+#Outcome durations of interest:  (1) Time of Bed request to MD report; (2) Time from MD report to arrival on the floor
+ED.clean$dur1.request.report<-difftime(ED.clean$MD_REPORT_DATE_TIME,ED.clean$BED_REQUEST_DATE_TIME, units="min")
+ED.clean$dur2.report.floor<-difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$MD_REPORT_DATE_TIME, units="min")
+#limitations: alot of times MD report is clicked right before the patient is sent up to the floor, so this number is probably falsely decreased
+ED.clean$tot.dur<- difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min") 
+
+#additional columns to understand the data
+#1: day of the week of bed request:
+ED.clean$dayofweek = weekdays(as.Date(ED.clean$BED_REQUEST_DATE_TIME))  #returns what day of the week  the patient arrived to the hospital
+
+#2: Time of day of bed request
+ED.clean$timeofday= hour(ED.clean$BED_REQUEST_DATE_TIME)
+ED.clean$bed_request_date=as.Date(ED.clean$BED_REQUEST_DATE_TIME)
+
+#3: #number of total admission for that day 
+a=ED.clean %>%  #look through all ED admissions
+  group_by(as.Date(BED_REQUEST_DATE_TIME)) %>%  #group bed requests by date
+  summarise(tot_ED_admits.day=n())  #count the total # of bed requests per day; and spit out the number of ED admissions by day
+ED.admits.per.day<-rename(a, bed_request_date= "as.Date(BED_REQUEST_DATE_TIME)")  #rename column in ED.admits.per.day so both tables will have a column called "bed_request_date" so they can be merged
+ED.clean.2=inner_join(ED.clean,ED.admits.per.day,by="bed_request_date")  #merge ED.clean with ED.admits.per.day to obtain column of total admissions that day
+head(ED.clean.2)
 ```
 
 
+
 3. Trends:
+```{r}
+#Plot 1:  average tot.duration by location
+ggplot(data=ED.clean.2,
+       aes(x=)
+       )
+#Plot 2: average tot.duration by team
+
+#Plot 3: average total.duration by day of the week
+
+#plot 4: 
+```
 
 
 
@@ -60,29 +146,7 @@ Basket of evaluations for now:
 ```{r}
 
 
-#upload and configure the data
-#filename: MDrptEtc_20181027_FY17on
-admissions.data <- read.csv(file="MDrptEtc_20181027_FY17on.csv", header=TRUE)
-ED.data<-read.csv(file="MDrptWithBedReqandAdmitTeam_20181104_FY17on.csv", header=TRUE)
 
-#checking header names
-a=colnames(admissions.data)
-b=colnames(ED.data)
-names<-cbind(a,b)
-
-#rename column headings
-admissions.data.renamed <- rename(admissions.data,
-                                  ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
-                                  BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
-                                  MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
-                                  MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
-                                  ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #proxy time pt arrived on the floor
-                                  DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
-                                  MRN = PAT_MRN_ID,  #Identifier
-                                  TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
-                                  INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
-                                  INPATIENT_TEAM=CENSUS_ADMIT_SERVCIE,  #inpatient team who admitted the patient
-                                   )
 
 #ED.data.renamed <- rename(ED.data, diagnosis=ACCT_ADMIT_DX_NM, mrn=PAT_MRN_ID,  admitted_from=FROM_DEPT, admit_floor=CENSUS_ADMIT_DEPT, time_bed_request = MRFT_BED_REQ_DT_TM, time_md_paged=MD_PAGED_DT_TM, treatment_team_start_time = ADMIT_TREATMENT_START_DT, time_bed_assigned = BED_ASSIGN_DT_TM,  time_md_report=MD_RPT_DT_TM, ed_team=ED_DISCH_TEAM, admit_service_team=CENSUS_ADMIT_SERVCIE, time_of_arrival=HOSP_ADMIT_DT, time_of_admission=CENSUS_ADMIT_TM )
 #wish list:  bed assignment time; Inpatient team
@@ -94,7 +158,7 @@ admissions.data.renamed <- rename(admissions.data,
 #new.columns.data
 
 ##quick code to convert to days of the week!!!!  cool
-#crime_date = as.Date(ymd_hms(ED.data.renamed$time_bed_assigned))
+#crime_date = as.Date(ymd_hms(ED.clean$time_bed_assigned))
 #summary(crime_date)
 #crime_date_dotw=weekdays(crime_date)
 #hist(crime_date, breaks="month")
