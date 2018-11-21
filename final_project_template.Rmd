@@ -44,7 +44,7 @@ rm(list=ls())
 data.all.admission <- read.csv(file="MDrptEtc_20181027_FY17on.csv", header=TRUE)
 data.ED.admission <-read.csv(file="MDrptWithBedReqandAdmitTeam_20181104_FY17on.csv", header=TRUE)
 
-head(data.ED.admission)
+head(data.all.admission)
 
 #combine column...based on mrn and date?
 ```
@@ -54,23 +54,23 @@ head(data.ED.admission)
 2. Make new columns with cleaned up data - Diagnosis, etc
 ```{r}
 
-head(data.all.admission)
-all.admits.r <- rename(data.all.admission,
-                                  ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
-                                  ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
-                                  BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
-                                  MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
-                                  MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
-                                  ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
-                                  DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
-                                  MRN = PAT_MRN_ID,  #patient Identifier
-                                  TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
-                                  INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
-                                  INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
-                                  )
+colnames(data.all.admission)
+all.admits.r <- dplyr::rename(data.all.admission,
+                       ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                       ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
+                       BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                       MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                       MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                       ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
+                       DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                       MRN = PAT_MRN_ID,  #patient Identifier
+                       TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                       INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                       INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
+                      )
 
 head(data.ED.admission)
-ED.admits.r<- rename(data.ED.admission,
+ED.admits.r<- dplyr::rename(data.ED.admission,
                               ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
                               ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
                               BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
@@ -90,9 +90,9 @@ ED.admits.r<- rename(data.ED.admission,
 
 
 ED.clean<-ED.admits.r %>%
-  select(MRN,ARRIVAL_DATE_TIME, BED_REQUEST_DATE_TIME, BED_ASSIGNED_DATE_TIME, MD_PAGED_DATE_TIME, MD_REPORT_DATE_TIME, TEAM_ASSIGNED_DATE_TIME, ADMIT_INPATIENT_DATE_TIME, DIAGNOSIS,TEAM_ED,INPATIENT_FLOOR,INPATIENT_TEAM, INPATIENT_SERVICE)
+  dplyr::select(MRN,ARRIVAL_DATE_TIME, BED_REQUEST_DATE_TIME, BED_ASSIGNED_DATE_TIME, MD_PAGED_DATE_TIME, MD_REPORT_DATE_TIME, TEAM_ASSIGNED_DATE_TIME, ADMIT_INPATIENT_DATE_TIME, DIAGNOSIS,TEAM_ED,INPATIENT_FLOOR,INPATIENT_TEAM, INPATIENT_SERVICE)
 
-#Convert all time variables into a readable time format using library lubridate
+#Convert all time variables into a readable time format using library lubridate; and convert all string variables to "characters"
 ED.clean$ARRIVAL_DATE_TIME<-ymd_hms(ED.clean$ARRIVAL_DATE_TIME)
 ED.clean$BED_REQUEST_DATE_TIME<-ymd_hms(ED.clean$BED_REQUEST_DATE_TIME)
 ED.clean$BED_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$BED_ASSIGNED_DATE_TIME)
@@ -100,6 +100,7 @@ ED.clean$MD_PAGED_DATE_TIME<-ymd_hms(ED.clean$MD_PAGED_DATE_TIME)
 ED.clean$MD_REPORT_DATE_TIME<-ymd_hms(ED.clean$MD_REPORT_DATE_TIME)
 ED.clean$TEAM_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$TEAM_ASSIGNED_DATE_TIME)
 ED.clean$ADMIT_INPATIENT_DATE_TIME<-ymd_hms(ED.clean$ADMIT_INPATIENT_DATE_TIME)
+ED.clean$DIAGNOSIS<-as.character(ED.clean$DIAGNOSIS)
 
 #Outcome durations of interest:  (1) Time of Bed request to MD report; (2) Time from MD report to arrival on the floor
 ED.clean$dur1.request.report<-difftime(ED.clean$MD_REPORT_DATE_TIME,ED.clean$BED_REQUEST_DATE_TIME, units="min")
@@ -108,20 +109,50 @@ ED.clean$dur2.report.floor<-difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clea
 ED.clean$tot.dur<- difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min") 
 
 #additional columns to understand the data
-#1: day of the week of bed request:
+##1: day of the week of bed request:
 ED.clean$dayofweek = weekdays(as.Date(ED.clean$BED_REQUEST_DATE_TIME))  #returns what day of the week  the patient arrived to the hospital
 
-#2: Time of day of bed request
+##2: Time of day of bed request
 ED.clean$timeofday= hour(ED.clean$BED_REQUEST_DATE_TIME)
 ED.clean$bed_request_date=as.Date(ED.clean$BED_REQUEST_DATE_TIME)
 
-#3: #number of total admission for that day 
+##3: #number of total admission for that day 
 a=ED.clean %>%  #look through all ED admissions
   group_by(as.Date(BED_REQUEST_DATE_TIME)) %>%  #group bed requests by date
   summarise(tot_ED_admits.day=n())  #count the total # of bed requests per day; and spit out the number of ED admissions by day
-ED.admits.per.day<-rename(a, bed_request_date= "as.Date(BED_REQUEST_DATE_TIME)")  #rename column in ED.admits.per.day so both tables will have a column called "bed_request_date" so they can be merged
+ED.admits.per.day<-dplyr::rename(a, bed_request_date= "as.Date(BED_REQUEST_DATE_TIME)")  #rename column in ED.admits.per.day so both tables will have a column called "bed_request_date" so they can be merged
 ED.clean.2=inner_join(ED.clean,ED.admits.per.day,by="bed_request_date")  #merge ED.clean with ED.admits.per.day to obtain column of total admissions that day
-head(ED.clean.2)
+ED.clean.3<-ED.clean.2 %>%   #get rid of outliers (if duration is outside range of 0-1000 min, it likely was an error)
+  filter(tot.dur>0 & tot.dur<1000) %>%
+  return
+
+head(ED.clean.3)
+#convert durations from minutes to numeric to do calculations
+ED.clean.3$dur1.request.report<-as.integer(ED.clean.3$dur1.request.report)
+ED.clean.3$dur2.report.floor<-as.integer(ED.clean.3$dur2.report.floor)
+ED.clean.3$tot.dur<-as.integer(ED.clean.3$tot.dur)
+head(ED.clean.3)
+
+##4:  Column for grouped diagnoses - Respiratory
+#Distinct Diagnoses:  There are 3069 different ED diagnoses that were entered
+
+#find all respiratory diagnoses
+diag.resp=ED.admits.r %>%
+  dplyr::select(DIAGNOSIS) %>%
+  distinct(DIAGNOSIS) %>%
+  filter(grepl('asthma|respi|bronchiolitis', DIAGNOSIS, ignore.case = TRUE)) %>%
+  return
+
+a<-vector(); group.diag<-vector()
+#for loop: finds all diagnoses that contain "asthma, respi, bronchiolitis" and replaces it with "respiratory distress"
+for(i in 1:nrow(ED.clean.3)){
+  a<-grepl('asthma|respi|bronchiolitis', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)
+  if(a=="TRUE"){group.diag[i]<- "respiratory distress"}
+  else{group.diag[i]<-ED.clean.3$DIAGNOSIS[i]}
+}
+ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
+
+
 ```
 
 
@@ -129,9 +160,22 @@ head(ED.clean.2)
 3. Trends:
 ```{r}
 #Plot 1:  average tot.duration by location
-ggplot(data=ED.clean.2,
-       aes(x=)
-       )
+ggplot(data=ED.clean.3,
+       aes(x=tot_ED_admits.day, y=tot.dur)) +  #x and y axes
+       geom_boxplot()
+
+       
+
+##sample ggplot from hw6;  just a reference
+ggplot(df_boxplot.b, aes(x=status,y=expression)) +
+  geom_boxplot(outlier.colour=NA, color="grey18", fill="lightgreen") +
+  stat_boxplot(geom='errorbar', color="grey18") +
+  geom_jitter(size=1, position=position_jitter(width=0.3)) +
+  ggtitle("Boxplot for probe 201468_s_at") +
+  xlab("")+
+  ylab("RMA-intensity")+
+  theme_bw() +
+  theme(legend.position="none")
 #Plot 2: average tot.duration by team
 
 #Plot 3: average total.duration by day of the week
