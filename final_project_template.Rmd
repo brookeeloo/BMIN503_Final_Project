@@ -10,6 +10,9 @@ output:
 ---
 ```{r set-options, echo=FALSE, cache=FALSE}
 options(width = 400)
+
+#NOTES TO SELF:
+# surgical ED visits are counted twice - once to periop and once to 4ST, need to rectify this
 ```  
 ***
 Use this template to complete your project throughout the course. Your Final Project presentation in class will be based on the contents of this document. Replace the title/name and text below with your own, but leave the headers.
@@ -19,8 +22,13 @@ In this section, give a brief a description of your project and its goal, what d
 
 
 ### Introduction 
-The Emergency Department (ED) is an integral part of the hospital admission process accounting for nearly half of all hospital admissions in the United States. However, admission wait times vary in the ED and is influenced by many variables throughout the hospital. At Children's Hospital of Philadelphia, we have taken an iterative approach using quality improvement methodologies and the electronic health record (EHR) to streamline the admission process and improve communication from ED to IP staff, however variation in transfer times still remain. Delays in ED to IP transfer of care can impact hospital resources, increase ED crowding, and decrease patient satisfaction. These variables are difficult to identify and can vary throughout the year making it difficult to know where to focus quality improvement (QI) efforts. Historically, QI methods involve creating a diagram (ie. driver diagram, cause and effect diagram) that captures key elements of a specific workflow, from which a list of actionable items is generated. The Pareto Principle is then applied to determine which actionable items can improve the outcome the most. These changes then undergo evaluation through a Plan-Do-Study-Act cycle with the hopes of finding measurable improvements to quality of patient care. In a complex outcome such as ED admission wait times, it is influenced by many factors throughout the hospital making QI efforts difficult to determine. With the skills learned in class, I hope to introduce a novel approach to QI by using machine learning to determine the key drivers that influence our hospital’s ED admission wait times, and use those identified variables to determine QI efforts.
-Objective: To determine if 1) machine learning methods can provide a framework for finding variables that significantly influence ED admission wait times and therefore direct QI efforts. 2) to determine if machine learning is a valid approach to use to predict ED wait times.
+The Emergency Department (ED) is an integral part of the hospital admission process accounting for nearly half of all hospital admissions in the United States. However, admission wait times vary in the ED and is influenced by many variables throughout the hospital. At Children's Hospital of Philadelphia, we have taken an iterative approach using quality improvement (QI) methodologies and the electronic health record (EHR) to streamline the admission process and improve communication from ED to inpatient (IP) staff, however variation in transfer times still remain. Delays in ED to IP transfer of care can impact hospital resources, increase ED crowding, and decrease patient satisfaction. 
+
+Historically, QI methods involve creating a diagram (ie. driver diagram, cause and effect diagram) that captures key elements of a specific workflow, from which a list of actionable items is generated. These actionable items then undergo evaluation through a Plan-Do-Study-Act cycle with the hopes of finding measurable improvements to quality of patient care. In a complex outcome such as ED admission wait times, it is influenced by many factors throughout the hospital making QI efforts difficult to determine. These variables are difficult to identify and can vary throughout the year making it difficult to know where to focus quality improvement (QI) efforts. With the skills learned in class, I hope to introduce a novel approach to QI by using machine learning to determine the key drivers that influence our hospital’s ED admission wait times, and use those identified variables to determine QI efforts.
+
+Objective: To determine if 1) we can identify variables that seem to significantly impact ED wait times, 2) determine if machine learning methods can provide a framework for finding variables that significantly influence ED admission wait times and therefore direct QI efforts. 3) determine if machine learning is a valid approach to use to predict ED wait times.
+
+This project is interdisciplinary because it is using the concepts of descriptive analysis and machine learning, but adapted into a well established hospital quality improvement framework used throughout the world today for process improvement.  
 
 In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff #i feel like I answered this already in the above paragraph.
 
@@ -53,15 +61,15 @@ head(data.all.admission)
 
 2. Make new columns with cleaned up data - Diagnosis, etc
 ```{r}
-
+#All admissions with cleaned up column headings
 colnames(data.all.admission)
 all.admits.r <- dplyr::rename(data.all.admission,
-                       ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                      ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
                        ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
                        BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
                        MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
                        MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
-                       ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
+                       ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy for when pt arrived on floor
                        DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
                        MRN = PAT_MRN_ID,  #patient Identifier
                        TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
@@ -69,7 +77,7 @@ all.admits.r <- dplyr::rename(data.all.admission,
                        INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
                       )
 
-head(data.ED.admission)
+#ED admissions with cleaned up column headings
 ED.admits.r<- dplyr::rename(data.ED.admission,
                               ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
                               ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
@@ -87,12 +95,11 @@ ED.admits.r<- dplyr::rename(data.ED.admission,
                               INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
                                 )
 
-
-
 ED.clean<-ED.admits.r %>%
   dplyr::select(MRN,ARRIVAL_DATE_TIME, BED_REQUEST_DATE_TIME, BED_ASSIGNED_DATE_TIME, MD_PAGED_DATE_TIME, MD_REPORT_DATE_TIME, TEAM_ASSIGNED_DATE_TIME, ADMIT_INPATIENT_DATE_TIME, DIAGNOSIS,TEAM_ED,INPATIENT_FLOOR,INPATIENT_TEAM, INPATIENT_SERVICE)
 
-#Convert all time variables into a readable time format using library lubridate; and convert all string variables to "characters"
+#CLEAN UP:  Convert all time variables into a readable time format using library lubridate; and convert all string variables to "characters"
+ED.clean$MRN<-as.character(ED.clean$MRN)
 ED.clean$ARRIVAL_DATE_TIME<-ymd_hms(ED.clean$ARRIVAL_DATE_TIME)
 ED.clean$BED_REQUEST_DATE_TIME<-ymd_hms(ED.clean$BED_REQUEST_DATE_TIME)
 ED.clean$BED_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$BED_ASSIGNED_DATE_TIME)
@@ -101,42 +108,54 @@ ED.clean$MD_REPORT_DATE_TIME<-ymd_hms(ED.clean$MD_REPORT_DATE_TIME)
 ED.clean$TEAM_ASSIGNED_DATE_TIME<-ymd_hms(ED.clean$TEAM_ASSIGNED_DATE_TIME)
 ED.clean$ADMIT_INPATIENT_DATE_TIME<-ymd_hms(ED.clean$ADMIT_INPATIENT_DATE_TIME)
 ED.clean$DIAGNOSIS<-as.character(ED.clean$DIAGNOSIS)
+ED.clean$TEAM_ED<-as.character(ED.clean$TEAM_ED)
+ED.clean$INPATIENT_FLOOR<-as.character(ED.clean$INPATIENT_FLOOR)
+ED.clean$INPATIENT_TEAM<-as.character(ED.clean$INPATIENT_TEAM)
+ED.clean$INPATIENT_SERVICE<-as.character(ED.clean$INPATIENT_SERVICE)
 
+head(ED.clean)
+
+## ADDITIONAL COLUMNS OF INTEREST:
 #Outcome durations of interest:  (1) Time of Bed request to MD report; (2) Time from MD report to arrival on the floor
 ED.clean$dur1.request.report<-difftime(ED.clean$MD_REPORT_DATE_TIME,ED.clean$BED_REQUEST_DATE_TIME, units="min")
 ED.clean$dur2.report.floor<-difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$MD_REPORT_DATE_TIME, units="min")
 #limitations: alot of times MD report is clicked right before the patient is sent up to the floor, so this number is probably falsely decreased
 ED.clean$tot.dur<- difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min") 
 
-#additional columns to understand the data
-##1: day of the week of bed request:
-ED.clean$dayofweek = weekdays(as.Date(ED.clean$BED_REQUEST_DATE_TIME))  #returns what day of the week  the patient arrived to the hospital
+#Additional columns to understand the data
+ED.clean$dayofweek = weekdays(as.Date(ED.clean$BED_REQUEST_DATE_TIME))  #returns what day of the week the pt bed was requested
+ED.clean$timeofday= hour(ED.clean$BED_REQUEST_DATE_TIME)  #time of day the bed request was ordered (units: hour)
+ED.clean$monthofrequest=month(ED.clean$BED_REQUEST_DATE_TIME) #month the bed request was ordered
+ED.clean$bed_request_date=as.Date(ED.clean$BED_REQUEST_DATE_TIME)  #date the bed request was ordered (without time)
 
-##2: Time of day of bed request
-ED.clean$timeofday= hour(ED.clean$BED_REQUEST_DATE_TIME)
-ED.clean$bed_request_date=as.Date(ED.clean$BED_REQUEST_DATE_TIME)
-
-##3: #number of total admission for that day 
+#number of total admission for that day 
 a=ED.clean %>%  #look through all ED admissions
   group_by(as.Date(BED_REQUEST_DATE_TIME)) %>%  #group bed requests by date
   summarise(tot_ED_admits.day=n())  #count the total # of bed requests per day; and spit out the number of ED admissions by day
 ED.admits.per.day<-dplyr::rename(a, bed_request_date= "as.Date(BED_REQUEST_DATE_TIME)")  #rename column in ED.admits.per.day so both tables will have a column called "bed_request_date" so they can be merged
 ED.clean.2=inner_join(ED.clean,ED.admits.per.day,by="bed_request_date")  #merge ED.clean with ED.admits.per.day to obtain column of total admissions that day
+
 ED.clean.3<-ED.clean.2 %>%   #get rid of outliers (if duration is outside range of 0-1000 min, it likely was an error)
   filter(tot.dur>0 & tot.dur<1000) %>%
   return
 
-head(ED.clean.3)
 #convert durations from minutes to numeric to do calculations
 ED.clean.3$dur1.request.report<-as.integer(ED.clean.3$dur1.request.report)
 ED.clean.3$dur2.report.floor<-as.integer(ED.clean.3$dur2.report.floor)
 ED.clean.3$tot.dur<-as.integer(ED.clean.3$tot.dur)
 head(ED.clean.3)
 
-##4:  Column for grouped diagnoses - Respiratory
-#Distinct Diagnoses:  There are 3069 different ED diagnoses that were entered
+##Col4: Inpatient teams renamed
+#renaming IP teams:
+list1=c("","8S 21671, GP/PULM","9S 21668, GP/NEURO", "9S 72643, GP/NEURO/EPILEPSY", "ADOLESCENT RESIDENT 21669","BLUE RESIDENT 14467, ICS/GP","CARDIOLOGY 17802", "CARDIOLOGY, FLOC A", "CARDIOLOGY, FLOC B","CICU 42644, BLUE","CICU 42644, RED", "FLOC SURGICAL HOSPITALIST, 77707","GOLD COMPLEX-1 11929", "GOLD COMPLEX-2 11928","GREEN RESIDENT 21667, GI","HACU", "HPT A 11927","HPT B 11930","HPT C 11931", "MBU A 74051", "MBU B 74052","MEDICAL HOSPITALIST 10146, TEAM", "ONCOLOGY 15511, RESIDENT LIQUID","ONCOLOGY 72015, RESIDENT SOLID/NEURO","ONCOLOGY, BMT", "ONCOLOGY, LIQUID","ONCOLOGY, NEURO", "ONCOLOGY, SOLID","PCU, ORANGE (ACUTE)","PICU 19041, GREEN", "PICU 19053, RED","PICU 78485, PURPLE","PICU, YELLOW", "RED RESIDENT 21670, HEME/GP", "SSU-SEASONAL STAY UNIT 79427", "YELLOW RESIDENT 19966, ENDO/MET/RENAL", "NICU 15945, BLUE 1","NICU 72517, BLUE 2", "NICU BLUE 2" ,"NICU 25633, PURPLE 1", "NICU 72519, PURPLE 2","NICU 71317, ORANGE 1","NICU 71602, ORANGE 2","NICU 70330, RED","NICU 20132, GREEN","REHAB BLUE TEAM", "REHAB GREEN TEAM","REHAB RED TEAM","ONCO, LIQUID CONSULT")
 
-#find all respiratory diagnoses
+values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PACU", "PICU Resident","PICU Resident","PICU Resident" , "PICU Attending" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
+ED.clean.3<-ED.clean.3 %>%
+  mutate(INP_TEAM_RENAMED = factor(INPATIENT_TEAM, levels=list1, labels=values1))
+
+##4:  Column for grouped diagnoses - Respiratory
+#Distinct Diagnoses:  There are 3069 different ED diagnoses that were entered for admitted patients
+#Method: Find all respiratory diagnoses by looking for the words "asthma, respi or bronchiolitis"
 diag.resp=ED.admits.r %>%
   dplyr::select(DIAGNOSIS) %>%
   distinct(DIAGNOSIS) %>%
@@ -144,43 +163,92 @@ diag.resp=ED.admits.r %>%
   return
 
 a<-vector(); group.diag<-vector()
-#for loop: finds all diagnoses that contain "asthma, respi, bronchiolitis" and replaces it with "respiratory distress"
+#for loop: 
+# 1) finds all diagnoses that contain "asthma, respi, bronchiolitis, wheezing" and replaces it with "respiratory distress"
+# 2) finds all diagnoses containing "" replaces it with "GI distress"
+# 3) Finds all diagnoses containing "Sickle-cell, Hb-SS"  replaces it with "Sickle cell"
 for(i in 1:nrow(ED.clean.3)){
-  a<-grepl('asthma|respi|bronchiolitis', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)
+  a<-grepl('asthma|respi|bronchiolitis|wheezing|dyspnea', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)
   if(a=="TRUE"){group.diag[i]<- "respiratory distress"}
   else{group.diag[i]<-ED.clean.3$DIAGNOSIS[i]}
 }
 ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
 
+#Col5:  Bed location
 
 ```
 
 
 
-3. Trends:
+3. Visual Trends / Plots:
 ```{r}
-#Plot 1:  average tot.duration by location
-ggplot(data=ED.clean.3,
-       aes(x=tot_ED_admits.day, y=tot.dur)) +  #x and y axes
-       geom_boxplot()
 
-       
+#Boxplot of average wait times:
+summary(ED.clean.3$tot.dur)
 
-##sample ggplot from hw6;  just a reference
-ggplot(df_boxplot.b, aes(x=status,y=expression)) +
-  geom_boxplot(outlier.colour=NA, color="grey18", fill="lightgreen") +
-  stat_boxplot(geom='errorbar', color="grey18") +
-  geom_jitter(size=1, position=position_jitter(width=0.3)) +
-  ggtitle("Boxplot for probe 201468_s_at") +
-  xlab("")+
-  ylab("RMA-intensity")+
-  theme_bw() +
-  theme(legend.position="none")
-#Plot 2: average tot.duration by team
+ggplot(data=ED.clean.3, aes(y=tot.dur)) +
+      geom_boxplot() +
+      theme(axis.text.y = element_text(face="plain", size=10, angle=45))
 
-#Plot 3: average total.duration by day of the week
+#PLOT: Does Duration vary by Day of the Week
+  ggplot(data=ED.clean.3, 
+         aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=tot.dur)) + 
+    geom_boxplot() +
+    scale_x_discrete("days of the week") +   #labels
+    scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
+  
+#Plot:  Does Duration vary by Inpatient Bed Location?  
+plot1<-ED.clean.3 %>%
+  group_by(INPATIENT_FLOOR) %>%
+  summarise(mean=mean(tot.dur),count=n())
+plot1<-plot1[!plot1$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
 
-#plot 4: 
+ggplot(data=plot1,
+       aes(x=plot1$INPATIENT_FLOOR, y=plot1$mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", 
+                           size=10, angle=45),
+             axis.text.y = element_text(face="plain", color="#993333", 
+                           size=10, angle=45))
+
+#Plot 2:  Does duration vary by Inpatient Team? Yes
+plot2<-ED.clean.3 %>%
+  group_by(INP_TEAM_RENAMED) %>%
+  summarise(mean=mean(tot.dur),count=n()) %>%
+  arrange(desc(mean)) %>%
+  return
+
+
+ggplot(data=plot2,
+       aes(x=INP_TEAM_RENAMED, y=mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", 
+                           size=10, angle=45),
+             axis.text.y = element_text(face="plain", color="#993333", 
+                           size=10, angle=45))
+
+
+
+#plot 4: Does it vary by time of day that the admission bed request was placed?  yes
+plot3<-ED.clean.3 %>%
+  group_by(timeofday) %>%
+  summarise(mean=mean(tot.dur), count=n())
+ggplot(data=plot3,
+       aes(x=timeofday, y=mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", 
+                           size=10, angle=45),
+             axis.text.y = element_text(face="plain", color="#993333", 
+                           size=10, angle=45))
+
+#plot 5:  Does it vary by the number of admissions that day
+plot4 <- ED.clean.3 %>%
+  group_by(grouped.diagnoses) %>%
+  summarise(mean=mean(tot.dur), count=n())
+plot4<-plot4[plot4$count>100,]
+ggplot(data=plot4,
+       aes(x=grouped.diagnoses, y=mean)) + geom_point() 
+       #theme(axis.text.x = element_text(face="plain", color="#993333", 
+       #                    size=10, angle=45),
+      #       axis.text.y = element_text(face="plain", color="#993333", 
+       #                    size=10, angle=45))
 ```
 
 
