@@ -152,7 +152,7 @@ head(ED.clean.3)
 #renaming IP teams:
 list1=c("","8S 21671, GP/PULM","9S 21668, GP/NEURO", "9S 72643, GP/NEURO/EPILEPSY", "ADOLESCENT RESIDENT 21669","BLUE RESIDENT 14467, ICS/GP","CARDIOLOGY 17802", "CARDIOLOGY, FLOC A", "CARDIOLOGY, FLOC B","CICU 42644, BLUE","CICU 42644, RED", "FLOC SURGICAL HOSPITALIST, 77707","GOLD COMPLEX-1 11929", "GOLD COMPLEX-2 11928","GREEN RESIDENT 21667, GI","HACU", "HPT A 11927","HPT B 11930","HPT C 11931", "MBU A 74051", "MBU B 74052","MEDICAL HOSPITALIST 10146, TEAM", "ONCOLOGY 15511, RESIDENT LIQUID","ONCOLOGY 72015, RESIDENT SOLID/NEURO","ONCOLOGY, BMT", "ONCOLOGY, LIQUID","ONCOLOGY, NEURO", "ONCOLOGY, SOLID","PCU, ORANGE (ACUTE)","PICU 19041, GREEN", "PICU 19053, RED","PICU 78485, PURPLE","PICU, YELLOW", "RED RESIDENT 21670, HEME/GP", "SSU-SEASONAL STAY UNIT 79427", "YELLOW RESIDENT 19966, ENDO/MET/RENAL", "NICU 15945, BLUE 1","NICU 72517, BLUE 2", "NICU BLUE 2" ,"NICU 25633, PURPLE 1", "NICU 72519, PURPLE 2","NICU 71317, ORANGE 1","NICU 71602, ORANGE 2","NICU 70330, RED","NICU 20132, GREEN","REHAB BLUE TEAM", "REHAB GREEN TEAM","REHAB RED TEAM","ONCO, LIQUID CONSULT")
 
-values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PACU", "PICU Green","PICU Resident","PICU Resident" , "PICU Attending" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
+values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PCU", "PICU Green","PICU Resident","PICU Resident" , "PICU Yellow" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
 ED.clean.3<-ED.clean.3 %>%
   mutate(INP_TEAM_RENAMED = factor(INPATIENT_TEAM, levels=list1, labels=values1))
 
@@ -208,47 +208,68 @@ ggplot(data=plot, aes(x=year, y=dur1.request.report, group=year)) +
       geom_boxplot() +
       theme(axis.text.y = element_text(face="plain", size=10, angle=45))
 
-#Does duration vary by month? not really
+#Does duration vary by month?
 plot<- ED.clean.3 %>%
   group_by(monthofrequest) %>%
-  summarise(mean=mean(tot.dur), count=n())
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+
 #Boxplot
 ggplot(data=ED.clean.3, aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=dur2.report.floor, group=monthofrequest)) + geom_boxplot()+
    scale_x_discrete("month of bed request")
 #averages
-ggplot(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean))+geom_point()
+ggplot()+
+  geom_point(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean_tot,color="black",size=count))+
+  geom_point(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean_dur1,color="green",size=count)) +
+  geom_point(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean_dur2,color="red",size=count))+
+  theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+        axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+  xlab("Month")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time vs Month")+
+  scale_colour_manual(name = 'color', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
+
 
 #PLOT: Does Duration vary by Day of the Week
-ggplot(data=ED.clean.3, 
-      aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=tot.dur)) + 
-    geom_boxplot() +
-    scale_x_discrete("days of the week") +   #labels
-    scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
+weekdays<-c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+ggplot() +
+  geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=tot.dur)) + 
+  xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
+  # geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=dur1.request.report))+
+  # geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=dur2.report.floor))+
+     #labels
+  #  scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
 #ggplot(data=ED.clean.3, aes(x=dayofweek, y=tot.dur, group=dayofweek))+geom_boxplot()
 
 #Plot:  Does Duration vary by Inpatient Bed Location?  
 plot1<-ED.clean.3 %>%
   group_by(INPATIENT_FLOOR) %>%
-  summarise(mean=mean(tot.dur),count=n())
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 plot1<-plot1[!plot1$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
 
+ggplot()+
+  geom_point(data=plot1,aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot, size=count, color="black")) + 
+  geom_point(data=plot1,aes(x=INPATIENT_FLOOR, y=mean_dur1, color="red")) +
+  geom_point(data=plot1,aes(x=INPATIENT_FLOOR, y=mean_dur2,color="green")) +
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
+      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
+
 ggplot(data=plot1,
-       aes(x=reorder(INPATIENT_FLOOR,-mean), y=mean)) + geom_point() +
+       aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot)) + geom_point() +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
        xlab("Inpatient Floor")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor")
 
 #Plot 2:  Does duration vary by Inpatient Team? Yes
-plot2<-ED.clean.3 %>%
+plot2 <-ED.clean.3 %>%
   group_by(INP_TEAM_RENAMED) %>%
-  summarise(mean=mean(tot.dur),count=n()) %>%
-  arrange(desc(mean)) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n()) %>%
+  arrange(desc(mean_tot)) %>%
   return
 
-#Inpatient TEAM average plot
-par(mfrow=c(2,1))
-ggplot(data=plot2,
-       aes(x=reorder(INP_TEAM_RENAMED,-mean), y=mean)) + geom_point() +
+#Inpatient TEAM  plot
+ggplot()+
+  geom_point(data=plot2,aes(x=reorder(INP_TEAM_RENAMED,-mean_tot), y=mean_tot, size=count, color="black")) + 
+  geom_point(data=plot2,aes(x=INP_TEAM_RENAMED, y=mean_dur1, color="red")) +
+  geom_point(data=plot2,aes(x=INP_TEAM_RENAMED, y=mean_dur2,color="green")) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
       xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
@@ -275,30 +296,47 @@ ggplot(data=ED.clean.3, aes(x=INPATIENT_SERVICE, y=tot.dur, group=INPATIENT_SERV
    theme(axis.text.x = element_text(face="plain", color="#993333",size=8, angle=65, hjust = 1)) +
   xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
 
-
 #Does it vary by time of day that the admission bed request was placed?  yes
 plot3<-ED.clean.3 %>%
   group_by(timeofday) %>%
-  summarise(mean=mean(tot.dur), count=n())
-ggplot(data=plot3,
-       aes(x=reorder(timeofday,+timeofday), y=mean)) + geom_point() +
-       theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
-             axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
-       xlab("Time of Bed Request (hour)") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), patients=n())
 
-#plot 5:  Does it vary by the number of admissions that day
+ggplot()+geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_tot, color="black",size=patients)) +
+  geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur1, color="green", size=patients)) +
+  geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur2, color="red", size=patients)) +
+  theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
+  xlab("Time of Bed Request (hour)") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")+
+    scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
+#  scale_colour_manual(name = 'colour', values =c('black'='black','red'='red','green'='green'), labels = c('c2','c1','c3'))
+
+#Does it vary by diagnosis?
 plot4 <- ED.clean.3 %>%
   group_by(grouped.diagnoses) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 plot4<-plot4[plot4$count>100,]
-ggplot(data=plot4,
-       aes(x=reorder(grouped.diagnoses,-mean), y=mean)) + geom_point() +
+ggplot()+
+  geom_point(data=plot4,aes(x=reorder(grouped.diagnoses,-mean_tot),y=mean_tot, color="black",size=count))  +
+  geom_point(data=plot4,aes(x=grouped.diagnoses, y=mean_dur1, color="green",size=count)) +
+  geom_point(data=plot4,aes(x=grouped.diagnoses, y=mean_dur2, color="red",size=count)) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45)) +
-      xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")
+      xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")+
+  scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 
 #Is wait time related to # of Bed Requests made that day?
-#plot7 <- 
+plot7 <- ED.clean.3 %>%
+  group_by(tot_ED_admits.day) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+ggplot()+
+  geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_tot))+
+  #geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_dur1, color="red"))+
+  #geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_dur2, color="green"))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))+
+  xlab("# Admission Requests / day") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs # of ED Admission Requests")
+ # scale_colour_manual(name = 'color', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
+
   
 #Is Duration related to total ED bed requests that day
 ```
