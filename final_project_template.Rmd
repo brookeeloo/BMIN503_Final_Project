@@ -12,7 +12,8 @@ output:
 options(width = 400)
 
 #NOTES TO SELF:
-# surgical ED visits are counted twice - once to periop and once to 4ST, need to rectify this
+# surgical ED visits are counted twice - once to periop and once to 4ST, need to rectify this eventually
+
 ```  
 ***
 Use this template to complete your project throughout the course. Your Final Project presentation in class will be based on the contents of this document. Replace the title/name and text below with your own, but leave the headers.
@@ -137,6 +138,8 @@ ED.clean.2=inner_join(ED.clean,ED.admits.per.day,by="bed_request_date")  #merge 
 
 ED.clean.3<-ED.clean.2 %>%   #get rid of outliers (if duration is outside range of 0-1000 min, it likely was an error)
   filter(tot.dur>0 & tot.dur<1000) %>%
+  filter(dur1.request.report>0 & dur1.request.report<1000) %>%
+  filter(dur2.report.floor>0 & dur2.report.floor<1000) %>%
   return
 
 #convert durations from minutes to numeric to do calculations
@@ -149,11 +152,11 @@ head(ED.clean.3)
 #renaming IP teams:
 list1=c("","8S 21671, GP/PULM","9S 21668, GP/NEURO", "9S 72643, GP/NEURO/EPILEPSY", "ADOLESCENT RESIDENT 21669","BLUE RESIDENT 14467, ICS/GP","CARDIOLOGY 17802", "CARDIOLOGY, FLOC A", "CARDIOLOGY, FLOC B","CICU 42644, BLUE","CICU 42644, RED", "FLOC SURGICAL HOSPITALIST, 77707","GOLD COMPLEX-1 11929", "GOLD COMPLEX-2 11928","GREEN RESIDENT 21667, GI","HACU", "HPT A 11927","HPT B 11930","HPT C 11931", "MBU A 74051", "MBU B 74052","MEDICAL HOSPITALIST 10146, TEAM", "ONCOLOGY 15511, RESIDENT LIQUID","ONCOLOGY 72015, RESIDENT SOLID/NEURO","ONCOLOGY, BMT", "ONCOLOGY, LIQUID","ONCOLOGY, NEURO", "ONCOLOGY, SOLID","PCU, ORANGE (ACUTE)","PICU 19041, GREEN", "PICU 19053, RED","PICU 78485, PURPLE","PICU, YELLOW", "RED RESIDENT 21670, HEME/GP", "SSU-SEASONAL STAY UNIT 79427", "YELLOW RESIDENT 19966, ENDO/MET/RENAL", "NICU 15945, BLUE 1","NICU 72517, BLUE 2", "NICU BLUE 2" ,"NICU 25633, PURPLE 1", "NICU 72519, PURPLE 2","NICU 71317, ORANGE 1","NICU 71602, ORANGE 2","NICU 70330, RED","NICU 20132, GREEN","REHAB BLUE TEAM", "REHAB GREEN TEAM","REHAB RED TEAM","ONCO, LIQUID CONSULT")
 
-values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PACU", "PICU Resident","PICU Resident","PICU Resident" , "PICU Attending" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
+values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PACU", "PICU Green","PICU Resident","PICU Resident" , "PICU Attending" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
 ED.clean.3<-ED.clean.3 %>%
   mutate(INP_TEAM_RENAMED = factor(INPATIENT_TEAM, levels=list1, labels=values1))
 
-##4:  Column for grouped diagnoses - Respiratory
+##4: Diagnoses Renamed
 #Distinct Diagnoses:  There are 3069 different ED diagnoses that were entered for admitted patients
 #Method: Find all respiratory diagnoses by looking for the words "asthma, respi or bronchiolitis"
 diag.resp=ED.admits.r %>%
@@ -168,13 +171,20 @@ a<-vector(); group.diag<-vector()
 # 2) finds all diagnoses containing "" replaces it with "GI distress"
 # 3) Finds all diagnoses containing "Sickle-cell, Hb-SS"  replaces it with "Sickle cell"
 for(i in 1:nrow(ED.clean.3)){
-  a<-grepl('asthma|respi|bronchiolitis|wheezing|dyspnea', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)
+  a<-grepl('asthma|respi|bronchiolitis|wheezing|dyspnea|shortness of breath', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE) #respiratory distress
+  b<-grepl('sickle-cell|hb-ss', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)  #sickle cell related illness
+  c<-grepl('gastrostomy', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE ) #GT malfunction
+  d<-grepl('ventricular intracranial', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE ) #VP shunt malfunction
+  e<-grepl('fracture', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE )  #this searches for all fractures;
   if(a=="TRUE"){group.diag[i]<- "respiratory distress"}
+  else if(a=="FALSE" & b=="TRUE"){group.diag[i]<- "Sickle Cell related"}
+  else if(a=="FALSE" & b=="FALSE" & c=="TRUE"){group.diag[i]<- "G-Tube complication"}
+  else if(a=="FALSE" & b=="FALSE" & c=="FALSE" & d=="TRUE"){group.diag[i]<- "VP shunt malfunction"}
+  else if(a=="FALSE" & b=="FALSE" & c=="FALSE" & d=="FALSE" & e=="TRUE"){group.diag[i]<- "ANY Fracture"}
   else{group.diag[i]<-ED.clean.3$DIAGNOSIS[i]}
 }
 ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
 
-#Col5:  Bed location
 
 ```
 
@@ -182,13 +192,25 @@ ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
 
 3. Visual Trends / Plots:
 ```{r}
+#summary of numeric trends
+summary(ED.clean.3$tot.dur)  # median 117, mean 138min, bottom quartile is >164min
+summary(ED.clean.3$dur1.request.report)  #median 68, mean 85min, top 25% 107min, top quartile is <42min
+summary(ED.clean.3$dur2.report.floor) #median 38min, mean 53min, bottom quartile 67min;  (if it takes >1 hour from signout to going upstairs, not great)
 
-#Boxplot of average wait times:
-summary(ED.clean.3$tot.dur)
-
-ggplot(data=ED.clean.3, aes(y=tot.dur)) +
+#Does duration vary from year to year?  No
+plot5<- ED.clean.3 %>%
+  mutate(year=factor(year(bed_request_date), levels=c("2016","2017","2018"), labels=c("2016", "2017", "2018")))
+ggplot(data=plot5, aes(x=year, y=dur1.request.report, group=year)) +
       geom_boxplot() +
       theme(axis.text.y = element_text(face="plain", size=10, angle=45))
+
+#Does duration vary by month? not really
+plot6<- ED.clean.3 %>%
+  group_by(monthofrequest) %>%
+  summarise(mean=mean(tot.dur), count=n())
+
+ggplot(data=ED.clean.3, aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")),     y=dur2.report.floor, group=monthofrequest)) + geom_boxplot()+
+   scale_x_discrete("month of bed request")
 
 #PLOT: Does Duration vary by Day of the Week
   ggplot(data=ED.clean.3, 
@@ -196,6 +218,7 @@ ggplot(data=ED.clean.3, aes(y=tot.dur)) +
     geom_boxplot() +
     scale_x_discrete("days of the week") +   #labels
     scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
+#ggplot(data=ED.clean.3, aes(x=dayofweek, y=tot.dur, group=dayofweek))+geom_boxplot()
   
 #Plot:  Does Duration vary by Inpatient Bed Location?  
 plot1<-ED.clean.3 %>%
@@ -204,11 +227,10 @@ plot1<-ED.clean.3 %>%
 plot1<-plot1[!plot1$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
 
 ggplot(data=plot1,
-       aes(x=plot1$INPATIENT_FLOOR, y=plot1$mean)) + geom_point() +
-       theme(axis.text.x = element_text(face="plain", color="#993333", 
-                           size=10, angle=45),
-             axis.text.y = element_text(face="plain", color="#993333", 
-                           size=10, angle=45))
+       aes(x=reorder(INPATIENT_FLOOR,-mean), y=mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Inpatient Floor")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor")
 
 #Plot 2:  Does duration vary by Inpatient Team? Yes
 plot2<-ED.clean.3 %>%
@@ -217,26 +239,46 @@ plot2<-ED.clean.3 %>%
   arrange(desc(mean)) %>%
   return
 
-
+#Inpatient TEAM average plot
+par(mfrow=c(2,1))
 ggplot(data=plot2,
-       aes(x=INP_TEAM_RENAMED, y=mean)) + geom_point() +
-       theme(axis.text.x = element_text(face="plain", color="#993333", 
-                           size=10, angle=45),
-             axis.text.y = element_text(face="plain", color="#993333", 
-                           size=10, angle=45))
+       aes(x=reorder(INP_TEAM_RENAMED,-mean), y=mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
+      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
 
+#Inpatient Boxplot
+ggplot(data=ED.clean.3, aes(x=INP_TEAM_RENAMED, y=tot.dur, group=INP_TEAM_RENAMED)) +geom_boxplot() +
+   ggtitle("ED Wait Time vs Inpatient Team") +
+   theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
+  xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
 
+#Does wait time vary by service?
+plot8 <-ED.clean.3 %>%
+  group_by(INPATIENT_SERVICE) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+plot8<-plot8[!plot8$count<2,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
 
-#plot 4: Does it vary by time of day that the admission bed request was placed?  yes
+  
+ggplot(data=plot8, aes(x=reorder(INPATIENT_SERVICE,-mean_tot), y=mean_tot)) +geom_point() +
+   ggtitle("ED Wait Time vs Service Team") +
+   theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
+  xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
+
+ggplot(data=ED.clean.3, aes(x=INPATIENT_SERVICE, y=tot.dur, group=INPATIENT_SERVICE)) +geom_boxplot() +
+   ggtitle("ED Wait Time vs Service Team") +
+   theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
+  xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
+
+#Does it vary by time of day that the admission bed request was placed?  yes
 plot3<-ED.clean.3 %>%
   group_by(timeofday) %>%
   summarise(mean=mean(tot.dur), count=n())
 ggplot(data=plot3,
        aes(x=timeofday, y=mean)) + geom_point() +
-       theme(axis.text.x = element_text(face="plain", color="#993333", 
-                           size=10, angle=45),
-             axis.text.y = element_text(face="plain", color="#993333", 
-                           size=10, angle=45))
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
+       xlab("Inpatient Team") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")
 
 #plot 5:  Does it vary by the number of admissions that day
 plot4 <- ED.clean.3 %>%
@@ -244,13 +286,49 @@ plot4 <- ED.clean.3 %>%
   summarise(mean=mean(tot.dur), count=n())
 plot4<-plot4[plot4$count>100,]
 ggplot(data=plot4,
-       aes(x=grouped.diagnoses, y=mean)) + geom_point() 
-       #theme(axis.text.x = element_text(face="plain", color="#993333", 
-       #                    size=10, angle=45),
-      #       axis.text.y = element_text(face="plain", color="#993333", 
-       #                    size=10, angle=45))
+       aes(x=reorder(grouped.diagnoses,-mean), y=mean)) + geom_point() +
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45)) +
+      xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")
+#Is wait time related to # of Bed Requests made that day?
+plot7 <- 
+  
+#Is Duration related to total ED bed requests that day
 ```
 
+Regression:
+```{r}
+
+```
+
+Who are the outliers?  There seems to be a large group per month
+```{r}
+outliers<-ED.clean.3 %>%
+  filter(dur2.report.floor>70) %>%
+  return
+  
+outliers %>%
+  group_by(INP_TEAM_RENAMED) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+
+a=outliers %>%
+  group_by(grouped.diagnoses) %>%
+  summarise(count=n()) 
+
+
+a=outliers %>%
+  group_by(INPATIENT_SERVICE) %>%
+  summarise(count=n()) 
+b=ED.clean.3 %>%
+  group_by(INPATIENT_SERVICE) %>%
+  summarise(total=n())
+c=inner_join(a,b,by="INPATIENT_SERVICE");
+c$percent=c$count/c$total*100
+#The percent of outliers each service has 
+c %>%
+  arrange(desc(percent))
+```
 
 
 
