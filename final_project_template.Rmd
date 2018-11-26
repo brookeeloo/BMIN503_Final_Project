@@ -35,17 +35,17 @@ In the second paragraph, explain why your problem is interdisciplinary, what fie
 
 ###Methods Overview:
 Libraries used:
-```{r}
+```{r, message=FALSE}
 #update all librarys; remove all variables
-rm(list = ls())  #Start with a clean slate
 library(ggplot2)
+library(gridExtra)
 library(dplyr)
 library(tidyverse)
 library(magrittr)
 library(lubridate)
 ```
 
-1. Clean up the data first (numbers are numbers, dates are dates etc)
+## Data Cleaning / Wrangling - Clean up the data first (numbers are numbers, dates are dates etc)
 ```{r}
 #upload and configure the data
 #filename: MDrptEtc_20181027_FY17on
@@ -189,37 +189,43 @@ ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
 ```
 
 
+HEADER: Visual Trends / Plots
 
 3. Visual Trends / Plots:
 ```{r}
-#summary of numeric trends
+#Summary of numeric trends
 summary(ED.clean.3$tot.dur)  # median 117, mean 138min, bottom quartile is >164min
 summary(ED.clean.3$dur1.request.report)  #median 68, mean 85min, top 25% 107min, top quartile is <42min
 summary(ED.clean.3$dur2.report.floor) #median 38min, mean 53min, bottom quartile 67min;  (if it takes >1 hour from signout to going upstairs, not great)
+```
 
+##Questions:
+```{r}
 #Does duration vary from year to year?  No
-plot5<- ED.clean.3 %>%
+plot<- ED.clean.3 %>%
   mutate(year=factor(year(bed_request_date), levels=c("2016","2017","2018"), labels=c("2016", "2017", "2018")))
-ggplot(data=plot5, aes(x=year, y=dur1.request.report, group=year)) +
+ggplot(data=plot, aes(x=year, y=dur1.request.report, group=year)) +
       geom_boxplot() +
       theme(axis.text.y = element_text(face="plain", size=10, angle=45))
 
 #Does duration vary by month? not really
-plot6<- ED.clean.3 %>%
+plot<- ED.clean.3 %>%
   group_by(monthofrequest) %>%
   summarise(mean=mean(tot.dur), count=n())
-
-ggplot(data=ED.clean.3, aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")),     y=dur2.report.floor, group=monthofrequest)) + geom_boxplot()+
+#Boxplot
+ggplot(data=ED.clean.3, aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=dur2.report.floor, group=monthofrequest)) + geom_boxplot()+
    scale_x_discrete("month of bed request")
+#averages
+ggplot(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean))+geom_point()
 
 #PLOT: Does Duration vary by Day of the Week
-  ggplot(data=ED.clean.3, 
-         aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=tot.dur)) + 
+ggplot(data=ED.clean.3, 
+      aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=tot.dur)) + 
     geom_boxplot() +
     scale_x_discrete("days of the week") +   #labels
     scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
 #ggplot(data=ED.clean.3, aes(x=dayofweek, y=tot.dur, group=dayofweek))+geom_boxplot()
-  
+
 #Plot:  Does Duration vary by Inpatient Bed Location?  
 plot1<-ED.clean.3 %>%
   group_by(INPATIENT_FLOOR) %>%
@@ -258,40 +264,41 @@ plot8 <-ED.clean.3 %>%
   group_by(INPATIENT_SERVICE) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 plot8<-plot8[!plot8$count<2,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
-
   
 ggplot(data=plot8, aes(x=reorder(INPATIENT_SERVICE,-mean_tot), y=mean_tot)) +geom_point() +
    ggtitle("ED Wait Time vs Service Team") +
-   theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
+   theme(axis.text.x = element_text(face="plain", color="#993333",size=8, angle=65, hjust = 1)) +
   xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
 
 ggplot(data=ED.clean.3, aes(x=INPATIENT_SERVICE, y=tot.dur, group=INPATIENT_SERVICE)) +geom_boxplot() +
    ggtitle("ED Wait Time vs Service Team") +
-   theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
+   theme(axis.text.x = element_text(face="plain", color="#993333",size=8, angle=65, hjust = 1)) +
   xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
+
 
 #Does it vary by time of day that the admission bed request was placed?  yes
 plot3<-ED.clean.3 %>%
   group_by(timeofday) %>%
   summarise(mean=mean(tot.dur), count=n())
 ggplot(data=plot3,
-       aes(x=timeofday, y=mean)) + geom_point() +
+       aes(x=reorder(timeofday,+timeofday), y=mean)) + geom_point() +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
-       xlab("Inpatient Team") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")
+       xlab("Time of Bed Request (hour)") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")
 
 #plot 5:  Does it vary by the number of admissions that day
 plot4 <- ED.clean.3 %>%
   group_by(grouped.diagnoses) %>%
-  summarise(mean=mean(tot.dur), count=n())
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 plot4<-plot4[plot4$count>100,]
 ggplot(data=plot4,
        aes(x=reorder(grouped.diagnoses,-mean), y=mean)) + geom_point() +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45)) +
       xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")
+
 #Is wait time related to # of Bed Requests made that day?
-plot7 <- 
+#plot7 <- 
   
 #Is Duration related to total ED bed requests that day
 ```
@@ -316,6 +323,9 @@ a=outliers %>%
   group_by(grouped.diagnoses) %>%
   summarise(count=n()) 
 
+poop=outliers %>%
+  group_by(INPATIENT_FLOOR) %>%
+  summarise(count=n())
 
 a=outliers %>%
   group_by(INPATIENT_SERVICE) %>%
@@ -354,97 +364,97 @@ Basket of evaluations for now:
 #hist(crime_date, breaks="month")
 
 
-#convert time data to be computable
-col1 <-ymd_hms(admissions.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
-col2 <-ymd_hms(admissions.data.renamed$time_md_paged)
-col3 <-ymd_hms(admissions.data.renamed$time_md_report)
-col4 <-ymd_hms(admissions.data.renamed$time_of_admission)
-
-#calculate durations between points of interest
-duration.bedrequesttomdpage <-difftime(col2,col1,units="min")  #duration between time of bed request to MD page 
-duration.mdpagetomdreport <-difftime(col3,col2, units="min")  #duration between MD paged to MD report given
-duration.mdreporttotime_of_admission <-difftime(col4,col3, units="min")  #duration between MD reported to Time of Admission
-total.duration<-difftime(col4,col1, units="min") #duration between time MD was paged to Time of Admission
-#add columns to data table
-data.with.durations<-cbind(admissions.data.renamed, duration.bedrequesttomdpage, duration.mdpagetomdreport, duration.mdreporttotime_of_admission, total.duration)
-summary(a)
-
-#look at ED data set only
-col1a <-ymd_hms(ED.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
-col2a <-ymd_hms(ED.data.renamed$time_bed_assigned) #time of bed assignment
-col3a<-ymd_hms(ED.data.renamed$time_md_paged)#time of MD paged
-col4a<-ymd_hms(ED.data.renamed$time_md_report) #Time MD report was given
-col5a <-ymd_hms(ED.data.renamed$time_of_admission)  #time of admission on inpatient
-
-duration21<-difftime(col2a,col1a, units="min") #time between bed assigned (2) and bed request (1)
-duration_pagetorequest<-difftime(col3a,col1a, units="min")  #time between MD page and bed request
-duration32<-difftime(col3a,col2a, units="min") #time between MD paged and bed assigned;  if negative, specialty team was consulted (and button was clicked, but not the time that the team actually signed out)
-duration42<-difftime(col4a,col2a, units="min") # time between MD report and bed assigned
-duration41<-difftime(col4a,col1a, units="min")  #total duration between time of bed request to MD Report
-duration54<-difftime(col5a,col4a, units="min")  #total duration between MD report to bed admission time
-n<-duration54<(-0)
-summary(n)
-ED.data.with.durations<-cbind(duration32, duration42, poop, duration_pagetorequest, ED.data.renamed)
-
-
-#total duration from bed request to time of admission on the floor
-#errors:  large durations due to being admitted to PICU after being admitted to floor or just an error in general
-#find the outliers here
-poop<- difftime(col5a,col1a,unit="min")
-which(poop>1000)
-a=ED.data.with.durations[281,]
-str(a)
-str(poop)
-mean(poop[1:37241], na.rm=TRUE)
-median(poop[1:37241], na.rm=TRUE)
-
-#plots
-ggplot(data=ED.data.with.durations,aes(x=year(col1a), y=poop)) +
-        geom_boxplot()
-
-#NOTE:  bed request to MD report shoudl be the time outcome measure;  the bed request is when teh patient is deemed medically safe to initiate finding a bed.  MD report is when the MD has given the report.  The time between Bed request to MD page is loaded with errors (1/3 of the time MD paged is referring to when consult team is paged, other time is missing), the time between MD 
-
-#Filter to only see ED admissions
-ed.admissions <- data.with.durations %>%
-  filter(admitted_from != "ED") %>%
-  group_by(hour(ymd_hms(time_of_admission))) %>%
-  summarize(count=n()) %>%
-  arrange(desc(count))
-poop1 <- cbind(ed.admissions[,1], ed.admissions[,2]*100/sum(ed.admissions[,2]))
-
-month(ymd_hms(data.with.durations$time_bed_request))
-
-# Total count of all admissions from ED:: GROUP BY TREATMENT TEAM
-num.ed.admissions <- ED.data.with.durations %>%
-  filter(admitted_from=="ED") %>%
-  group_by(ADMIT_TREATMENT_TEAM) %>%
-  summarize(count=n())%>%
-  arrange(desc(count)) 
-a=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
-
-## Total count of all admissions from ED: Group by floor
-num.ed.admissions <- ED.data.with.durations %>%
-  filter(admitted_from=="ED") %>%
-  group_by(admit_floor) %>%
-  summarize(count=n())%>%
-  arrange(desc(count)) 
-b=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
-
-## Total count of all admissions from ED: Group by service
-num.ed.admissions <- ED.data.with.durations %>%
-  filter(admitted_from=="ED") %>%
-  group_by(admit_service_team) %>%
-  summarize(count=n())%>%
-  arrange(desc(count)) 
-c=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]))
-#54% of all admissions at CHOP come from the ED
-
-#Top diagnoses admitted from ED
-admission.diagnoses<- data.with.durations %>%
-  filter(admitted_from=="ED") %>%
-  group_by(diagnosis) %>%
-  summarize(count=n()) %>%
-  arrange(desc(count)) 
+# #convert time data to be computable
+# col1 <-ymd_hms(admissions.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
+# col2 <-ymd_hms(admissions.data.renamed$time_md_paged)
+# col3 <-ymd_hms(admissions.data.renamed$time_md_report)
+# col4 <-ymd_hms(admissions.data.renamed$time_of_admission)
+# 
+# #calculate durations between points of interest
+# duration.bedrequesttomdpage <-difftime(col2,col1,units="min")  #duration between time of bed request to MD page 
+# duration.mdpagetomdreport <-difftime(col3,col2, units="min")  #duration between MD paged to MD report given
+# duration.mdreporttotime_of_admission <-difftime(col4,col3, units="min")  #duration between MD reported to Time of Admission
+# total.duration<-difftime(col4,col1, units="min") #duration between time MD was paged to Time of Admission
+# #add columns to data table
+# data.with.durations<-cbind(admissions.data.renamed, duration.bedrequesttomdpage, duration.mdpagetomdreport, duration.mdreporttotime_of_admission, total.duration)
+# summary(a)
+# 
+# #look at ED data set only
+# col1a <-ymd_hms(ED.data.renamed$time_bed_request) ##add a column that looks at time_hour, and takes out the hour the flight was scheduled to depart
+# col2a <-ymd_hms(ED.data.renamed$time_bed_assigned) #time of bed assignment
+# col3a<-ymd_hms(ED.data.renamed$time_md_paged)#time of MD paged
+# col4a<-ymd_hms(ED.data.renamed$time_md_report) #Time MD report was given
+# col5a <-ymd_hms(ED.data.renamed$time_of_admission)  #time of admission on inpatient
+# 
+# duration21<-difftime(col2a,col1a, units="min") #time between bed assigned (2) and bed request (1)
+# duration_pagetorequest<-difftime(col3a,col1a, units="min")  #time between MD page and bed request
+# duration32<-difftime(col3a,col2a, units="min") #time between MD paged and bed assigned;  if negative, specialty team was consulted (and button was clicked, but not the time that the team actually signed out)
+# duration42<-difftime(col4a,col2a, units="min") # time between MD report and bed assigned
+# duration41<-difftime(col4a,col1a, units="min")  #total duration between time of bed request to MD Report
+# duration54<-difftime(col5a,col4a, units="min")  #total duration between MD report to bed admission time
+# n<-duration54<(-0)
+# summary(n)
+# ED.data.with.durations<-cbind(duration32, duration42, poop, duration_pagetorequest, ED.data.renamed)
+# 
+# 
+# #total duration from bed request to time of admission on the floor
+# #errors:  large durations due to being admitted to PICU after being admitted to floor or just an error in general
+# #find the outliers here
+# poop<- difftime(col5a,col1a,unit="min")
+# which(poop>1000)
+# a=ED.data.with.durations[281,]
+# str(a)
+# str(poop)
+# mean(poop[1:37241], na.rm=TRUE)
+# median(poop[1:37241], na.rm=TRUE)
+# 
+# #plots
+# ggplot(data=ED.data.with.durations,aes(x=year(col1a), y=poop)) +
+#         geom_boxplot()
+# 
+# #NOTE:  bed request to MD report shoudl be the time outcome measure;  the bed request is when teh patient is deemed medically safe to initiate finding a bed.  MD report is when the MD has given the report.  The time between Bed request to MD page is loaded with errors (1/3 of the time MD paged is referring to when consult team is paged, other time is missing), the time between MD 
+# 
+# #Filter to only see ED admissions
+# ed.admissions <- data.with.durations %>%
+#   filter(admitted_from != "ED") %>%
+#   group_by(hour(ymd_hms(time_of_admission))) %>%
+#   summarize(count=n()) %>%
+#   arrange(desc(count))
+# poop1 <- cbind(ed.admissions[,1], ed.admissions[,2]*100/sum(ed.admissions[,2]))
+# 
+# month(ymd_hms(data.with.durations$time_bed_request))
+# 
+# # Total count of all admissions from ED:: GROUP BY TREATMENT TEAM
+# num.ed.admissions <- ED.data.with.durations %>%
+#   filter(admitted_from=="ED") %>%
+#   group_by(ADMIT_TREATMENT_TEAM) %>%
+#   summarize(count=n())%>%
+#   arrange(desc(count)) 
+# a=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
+# 
+# ## Total count of all admissions from ED: Group by floor
+# num.ed.admissions <- ED.data.with.durations %>%
+#   filter(admitted_from=="ED") %>%
+#   group_by(admit_floor) %>%
+#   summarize(count=n())%>%
+#   arrange(desc(count)) 
+# b=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]/sum(num.ed.admissions[,2])*100))
+# 
+# ## Total count of all admissions from ED: Group by service
+# num.ed.admissions <- ED.data.with.durations %>%
+#   filter(admitted_from=="ED") %>%
+#   group_by(admit_service_team) %>%
+#   summarize(count=n())%>%
+#   arrange(desc(count)) 
+# c=cbind(num.ed.admissions[,1] , (num.ed.admissions[,2]))
+# #54% of all admissions at CHOP come from the ED
+# 
+# #Top diagnoses admitted from ED
+# admission.diagnoses<- data.with.durations %>%
+#   filter(admitted_from=="ED") %>%
+#   group_by(diagnosis) %>%
+#   summarize(count=n()) %>%
+#   arrange(desc(count)) 
 
 #If the diagnosis has the word asthma in it, then rename diagnosis as asthma
 #The top 10 admission diagnoses included - fever, dyspnea, acute bronchiolitis, vomiting, convulsions, abdominal pain, appendicitis, asthma, ARDS, pneumonia, dehydration, wheezing, SS crisis, headache, cough.  But asthma shows up in a bunch of the various diagnoses.
