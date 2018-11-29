@@ -121,6 +121,8 @@ head(ED.clean)
 ED.clean$dur1.request.report<-difftime(ED.clean$MD_REPORT_DATE_TIME,ED.clean$BED_REQUEST_DATE_TIME, units="min")
 ED.clean$dur2.report.floor<-difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$MD_REPORT_DATE_TIME, units="min")
 #limitations: alot of times MD report is clicked right before the patient is sent up to the floor, so this number is probably falsely decreased
+ED.clean$dur.request.bedassign <- difftime(ED.clean$BED_ASSIGNED_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min")
+ED.clean$dur.bedassign.report <-difftime(ED.clean$MD_REPORT_DATE_TIME, ED.clean$BED_ASSIGNED_DATE_TIME, units="min")
 ED.clean$tot.dur<- difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min") 
 
 #Additional columns to understand the data
@@ -140,11 +142,16 @@ ED.clean.3<-ED.clean.2 %>%   #get rid of outliers (if duration is outside range 
   filter(tot.dur>0 & tot.dur<1000) %>%
   filter(dur1.request.report>0 & dur1.request.report<1000) %>%
   filter(dur2.report.floor>0 & dur2.report.floor<1000) %>%
+  filter(dur.request.bedassign>0) %>% 
+  filter(dur.bedassign.report>0) %>% #this only returns 25731 values (losing almost 8k values)
   return
+nrow(ED.clean.3)
 
 #convert durations from minutes to numeric to do calculations
 ED.clean.3$dur1.request.report<-as.integer(ED.clean.3$dur1.request.report)
 ED.clean.3$dur2.report.floor<-as.integer(ED.clean.3$dur2.report.floor)
+ED.clean.3$dur.request.bedassign<-as.integer(ED.clean.3$dur.request.bedassign)
+ED.clean.3$dur.bedassign.report<-as.integer(ED.clean.3$dur.bedassign.report)
 ED.clean.3$tot.dur<-as.integer(ED.clean.3$tot.dur)
 head(ED.clean.3)
 
@@ -197,6 +204,8 @@ HEADER: Visual Trends / Plots
 summary(ED.clean.3$tot.dur)  # median 117, mean 138min, bottom quartile is >164min
 summary(ED.clean.3$dur1.request.report)  #median 68, mean 85min, top 25% 107min, top quartile is <42min
 summary(ED.clean.3$dur2.report.floor) #median 38min, mean 53min, bottom quartile 67min;  (if it takes >1 hour from signout to going upstairs, not great)
+summary(ED.clean.3$dur.request.assigned) #median 26, mean 43min
+summary(ED.clean.3$dur.bedassign.report) #median 38 min, mean 48
 ```
 
 ##Questions:
@@ -250,7 +259,8 @@ ggplot()+
   geom_point(data=plot1,aes(x=INPATIENT_FLOOR, y=mean_dur2,color="green")) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
-      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
+      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor ")+
+  scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 
 ggplot(data=plot1,
        aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot)) + geom_point() +
@@ -272,7 +282,8 @@ ggplot()+
   geom_point(data=plot2,aes(x=INP_TEAM_RENAMED, y=mean_dur2,color="green")) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
-      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
+      xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")+
+  scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 
 #Inpatient Boxplot
 ggplot(data=ED.clean.3, aes(x=INP_TEAM_RENAMED, y=tot.dur, group=INP_TEAM_RENAMED)) +geom_boxplot() +
@@ -307,7 +318,7 @@ ggplot()+geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_tot,
   theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
   xlab("Time of Bed Request (hour)") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")+
-    scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
+    scale_colour_manual(name = 'colour', values =c('black','green','red'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 #  scale_colour_manual(name = 'colour', values =c('black'='black','red'='red','green'='green'), labels = c('c2','c1','c3'))
 
 #Does it vary by diagnosis?
@@ -322,7 +333,7 @@ ggplot()+
        theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45)) +
       xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")+
-  scale_colour_manual(name = 'colour', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
+  scale_colour_manual(name = 'colour', values =c('black','green','red'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 
 #Is wait time related to # of Bed Requests made that day?
 plot7 <- ED.clean.3 %>%
@@ -343,7 +354,46 @@ ggplot()+
 
 Regression:
 ```{r}
+colnames(ED.clean.3)
 
+data.regression <- ED.clean.3 %>%
+  select(dur1.request.report, dur2.report.floor, dur.request.bedassign, dur.bedassign.report, tot.dur, DIAGNOSIS, dayofweek, tot_ED_admits.day, TEAM_ED, timeofday, INP_TEAM_RENAMED, INPATIENT_FLOOR, monthofrequest, grouped.diagnoses, bed_request_date)
+
+#univariate linear regression
+summary((lm(tot.dur ~ dayofweek, data=ED.clean.3, family=binomial())))  #yes for Saturday, Sunday, Monday
+summary((lm(tot.dur ~ tot_ED_admits.day, data=ED.clean.3, family=binomial())))  #yes
+summary((lm(tot.dur ~ TEAM_ED, data=ED.clean.3, family=binomial())))  #only if its team 6, trauma
+summary((lm(tot.dur ~ timeofday, data=ED.clean.3, family=binomial()))) #not singularly
+summary((lm(tot.dur ~ INP_TEAM_RENAMED, data=ED.clean.3, family=binomial())))
+summary((lm(tot.dur ~ INPATIENT_FLOOR, data=ED.clean.3, family=binomial())))
+summary((lm(tot.dur ~ monthofrequest, data=ED.clean.3, family=binomial()))) #no
+summary((lm(tot.dur ~ grouped.diagnoses, data=ED.clean.3, family=binomial()))) #no
+summary((lm(tot.dur ~ bed_request_date, data=ED.clean.3, family=binomial())))
+
+#multivariable regression
+summary((lm(tot.dur~ dayofweek + tot_ED_admits.day+TEAM_ED+timeofday+INPATIENT_SERVICE+INP_TEAM_RENAMED, data=ED.clean.3)))
+head(ED.clean.3)
+#convert total duration into a dichotomous variable (>150 min is too long) and rerun analysis
+data.dichotomous.clean <- ED.clean.3 %>%
+  mutate(wait_time_long = cut(tot.dur, breaks=c(0, 120, 1000), labels=c("no", "yes"))) %>%
+  mutate(reqtoreport_long = cut(dur1.request.report, breaks=c(0, 120, 1000),labels=c("no", "yes"))) %>%
+  mutate(reporttoINP_long = cut(dur2.report.floor, breaks=c(0,60,1000), labels=c("no", "yes"))) %>%
+  mutate(reqtoassigned_long = cut(dur.request.bedassign, breaks=c(0,60,1000), labels=c("no", "yes"))) %>%
+  mutate(assigntoreport_long = cut(dur.bedassign.report, breaks=c(0,30,1000), labels=c("no", "yes")))  #from bed assigned to report it takes much longer than 30 min
+  
+#plot 1
+ggplot(data=data.dichotomous.clean, aes(x=INP_TEAM_RENAMED, fill=assigntoreport_long)) +
+      geom_bar(position="dodge") +
+      theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+            axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
+ # xlab("# Admission Requests / day") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs # of ED Admission Requests")
+#what if we had inpatient page downstairs when bed is assigned????
+
+#plot 2
+ggplot(data=data.dichotomous.clean, aes(x=INP_TEAM_RENAMED, fill=reqtoassigned)) +
+      geom_bar(position="dodge") +
+      theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+            axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
 ```
 
 Who are the outliers?  There seems to be a large group per month
