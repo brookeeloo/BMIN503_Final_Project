@@ -367,8 +367,8 @@ summary((lm(tot.dur ~ timeofday, data=ED.clean.3, family=binomial()))) #not sing
 summary((lm(tot.dur ~ INP_TEAM_RENAMED, data=ED.clean.3, family=binomial())))
 summary((lm(tot.dur ~ INPATIENT_FLOOR, data=ED.clean.3, family=binomial())))
 summary((lm(tot.dur ~ monthofrequest, data=ED.clean.3, family=binomial()))) #no
-summary((lm(tot.dur ~ grouped.diagnoses, data=ED.clean.3, family=binomial()))) #no
-summary((lm(tot.dur ~ bed_request_date, data=ED.clean.3, family=binomial())))
+#summary((lm(tot.dur ~ grouped.diagnoses, data=ED.clean.3, family=binomial()))) #no
+#summary((lm(tot.dur ~ bed_request_date, data=ED.clean.3, family=binomial())))
 
 #multivariable regression
 summary((lm(tot.dur~ dayofweek + tot_ED_admits.day+TEAM_ED+timeofday+INPATIENT_SERVICE+INP_TEAM_RENAMED, data=ED.clean.3)))
@@ -390,10 +390,119 @@ ggplot(data=data.dichotomous.clean, aes(x=INP_TEAM_RENAMED, fill=assigntoreport_
 #what if we had inpatient page downstairs when bed is assigned????
 
 #plot 2
-ggplot(data=data.dichotomous.clean, aes(x=INP_TEAM_RENAMED, fill=reqtoassigned)) +
-      geom_bar(position="dodge") +
-      theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
-            axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
+# ggplot(data=data.dichotomous.clean, aes(x=INP_TEAM_RENAMED, fill=reqtoassigned)) +
+#       geom_bar(position="dodge") +
+#       theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+#             axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
+```
+
+We've looked at the enterprise level of data, now lets look at the Service level.
+```{r}
+genpeds.data.clean <- ED.clean.3 %>%
+  filter(INPATIENT_SERVICE == "General Pediatrics")%>%
+  return
+columnnames=colnames(genpeds.data.clean)
+
+
+plot<- genpeds.data.clean %>%
+  group_by(INPATIENT_FLOOR) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+
+#Gen peds ED wait time by floor
+ggplot()+
+      geom_point(data=plot, aes(x=INPATIENT_FLOOR, y=mean_tot, size=count))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Inpatient Floor")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor")
+#       geom_bar(position="dodge") +
+#       theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+#             axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
+
+#gen peds wait time by week day
+plot<- genpeds.data.clean %>%
+  group_by(columnnames[[1]]) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+ggplot()+
+      geom_point(data=plot, aes(x=dayofweek, y=mean_tot))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
+
+#gen peds wait time vary by hour
+plot<- genpeds.data.clean %>%
+  group_by(timeofday) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+ggplot()+
+      geom_point(data=plot, aes(x=timeofday, y=mean_tot, size=count))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
+
+
+#By 
+```
+
+Now lets look at a particular diagnosis on gen peds
+```{r}
+asthma.data.clean <- ED.clean.3 %>%
+  filter(grepl('asthma',DIAGNOSIS, ignore.case=TRUE)) %>%
+  filter(INPATIENT_SERVICE == "General Pediatrics")%>%
+  filter(!grepl('PICU', INP_TEAM_RENAMED, ignore.case=TRUE)) %>% #takes out 109 cases
+  return #n=1436
+summary(asthma.data.clean$tot.dur)
+
+bronchiolitis.data.clean <- ED.clean.3 %>%
+  filter(grepl('bronchiolitis',DIAGNOSIS, ignore.case=TRUE)) %>%
+  filter(INPATIENT_SERVICE == "General Pediatrics")%>%
+  filter(!grepl('PICU', INP_TEAM_RENAMED, ignore.case=TRUE)) %>% #takes out 109 cases
+  return #n=1436
+summary(bronchiolitis.data.clean$tot.dur)
+
+fracture.data.clean <- ED.clean.3 %>%
+  filter(grepl('fracture',DIAGNOSIS, ignore.case=TRUE)) %>%
+  filter(!grepl('skull',DIAGNOSIS, ignore.case=TRUE)) %>%
+  filter(!grepl('PICU', INPATIENT_TEAM, ignore.case=TRUE)) %>%
+  return #n=1436
+
+summary(asthma.data.clean$tot.dur)
+summary(fracture.data.clean$tot.dur)
+
+plot<- fracture.data.clean %>%
+  group_by(INPATIENT_FLOOR) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+plot<-plot[plot$count>5,]
+#Asthma ED wait time by floor
+ggplot()+
+      geom_point(data=plot, aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot, size=count))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Inpatient Floor")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor")
+#       geom_bar(position="dodge") +
+#       theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
+#             axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))
+
+#gen peds wait time by week day
+plot<- asthma.data.clean %>%
+  group_by(dayofweek) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+plot<-plot[plot$count>10,]
+ggplot()+
+      geom_point(data=plot, aes(x=dayofweek, y=mean_tot))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
+
+#gen peds wait time vary by hour
+plot<- fracture.data.clean %>%
+  group_by(timeofday) %>%
+  summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
+ggplot()+
+      geom_point(data=plot, aes(x=timeofday, y=mean_tot, size=count))+
+       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
+             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
+       xlab("Time of Day")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Time of Day")
+
+summary(asthma.data.clean$tot.dur)
 ```
 
 Who are the outliers?  There seems to be a large group per month
