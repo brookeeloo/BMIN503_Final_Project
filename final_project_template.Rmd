@@ -1,6 +1,6 @@
 ---
-title: "BMIN503/EPID600 Project Template"
-author: "Brooke Luo"
+title: "BMIN503/EPID600 Emergency Department Admissions"
+author: "Brooke Luo, MD"
 output: 
   html_document:
     toc: false 
@@ -22,16 +22,24 @@ Use this template to complete your project throughout the course. Your Final Pro
 In this section, give a brief a description of your project and its goal, what data you are using to complete it, and what three faculty/staff in different fields you have spoken to about your project with a brief summary of what you learned from each person. Include a link to your final project GitHub repository.
 
 
-### Introduction 
 The Emergency Department (ED) is an integral part of the hospital admission process accounting for nearly half of all hospital admissions in the United States. However, admission wait times vary in the ED and is influenced by many variables throughout the hospital. At Children's Hospital of Philadelphia, we have taken an iterative approach using quality improvement (QI) methodologies and the electronic health record (EHR) to streamline the admission process and improve communication from ED to inpatient (IP) staff, however variation in transfer times still remain. Delays in ED to IP transfer of care can impact hospital resources, increase ED crowding, and decrease patient satisfaction. 
 
-Historically, QI methods involve creating a diagram (ie. driver diagram, cause and effect diagram) that captures key elements of a specific workflow, from which a list of actionable items is generated. These actionable items then undergo evaluation through a Plan-Do-Study-Act cycle with the hopes of finding measurable improvements to quality of patient care. In a complex outcome such as ED admission wait times, it is influenced by many factors throughout the hospital making QI efforts difficult to determine. These variables are difficult to identify and can vary throughout the year making it difficult to know where to focus quality improvement (QI) efforts. With the skills learned in class, I hope to introduce a novel approach to QI by using machine learning to determine the key drivers that influence our hospital’s ED admission wait times, and use those identified variables to determine QI efforts.
+Historically, QI methods involve creating a diagram (ie. driver diagram, cause and effect diagram) that captures key elements of a specific workflow, from which a list of actionable items is generated. These actionable items then undergo evaluation through a Plan-Do-Study-Act cycle with the hopes of finding measurable improvements to quality of patient care. In a complex outcome such as ED admission wait times, where it is influenced by many factors throughout the hospital, QI efforts are more difficult to determine. Variables that affect ED wait time outcomes are difficult to identify, and even more difficult to know how to intervene.  With the skills learned in class, I hope to introduce an approach to QI by using machine learning to determine the key drivers that influence our hospital’s ED admission wait times, and use those identified variables to determine QI efforts.
 
-Objective: To determine if 1) we can identify variables that seem to significantly impact ED wait times, 2) determine if machine learning methods can provide a framework for finding variables that significantly influence ED admission wait times and therefore direct QI efforts. 3) determine if machine learning is a valid approach to use to predict ED wait times.
+Objective: To determine if 1) we can identify variables that seem to significantly impact ED wait times, 2) determine if machine learning can provide a framework for finding variables that most significantly influence ED admission wait times and therefore direct QI efforts.
 
-This project is interdisciplinary because it is using the concepts of descriptive analysis and machine learning, but adapted into a well established hospital quality improvement framework used throughout the world today for process improvement.  
 
-In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff #i feel like I answered this already in the above paragraph.
+Dr. Joe Zorc, Emergency Department Physician and data steward at Children's Hospital of Philadelphia
+Dr. Zorc has an intimate knowledge about the process work in the Emergency department, is certified in quality improvement, and is a data steward at CHOP.  He mentored me throughout this project.  He was also the one who was able 
+There are many factors that 
+
+Aaron Massino:
+
+OCQI:
+
+### Introduction 
+
+This project is interdisciplinary because it is using the concepts of descriptive analysis and machine learning, but adapted into a well established hospital quality improvement framework used throughout the world today for process improvement.  I
 
 ###Methods Overview:
 Libraries used:
@@ -66,37 +74,37 @@ head(data.all.admission)
 colnames(data.all.admission)
 all.admits.r <- dplyr::rename(data.all.admission,
                       ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
-                       ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
-                       BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
-                       MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
-                       MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
-                       ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy for when pt arrived on floor
-                       DISCHARGE_DATE_TIME=HOSP_DISCHRG_DT, #Discharge from inpatient order time
-                       DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
-                       MRN = PAT_MRN_ID,  #patient Identifier
-                       TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
-                       INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
-                       INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
+                      ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
+                      BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                      MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                      MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                      ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy for when pt arrived on floor
+                      DISCHARGE_DATE_TIME=HOSP_DISCHRG_DT, #Discharge from inpatient order time
+                      DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                      MRN = PAT_MRN_ID,  #patient Identifier
+                      TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                      INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                      INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
                       )
 
 #ED admissions with cleaned up column headings
 ED.admits.r<- dplyr::rename(data.ED.admission,
-                              ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
-                              ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
-                              BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
-                              BED_ASSIGNED_DATE_TIME = BED_ASSIGN_DT_TM,  #time bed was assigned in the inpatient unit 
-                              MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
-                              MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
-                              TEAM_ASSIGNED_DATE_TIME=ADMIT_TREATMENT_START_DT, #time inpatient team assigned themselves to treatment team
-                              ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
-                              DISCHARGE_DATE_TIME=HOSP_DISCHRG_DT,
-                              DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
-                              MRN = PAT_MRN_ID,  #patient Identifier
-                              TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
-                              INPATIENT_TEAM=ADMIT_TREATMENT_TEAM, #team who take care of the patient
-                              INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
-                              INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
-                                )
+                      ARRIVAL_DATE_TIME=HOSP_ADMIT_DT,  #time patient presented to ED / arrived in hospital
+                      ADMIT_FROM=ADMIT_EVENT_ACTION_ABBR, #where they were admitted from (ED, periop, direct admission)
+                      BED_REQUEST_DATE_TIME = MRFT_BED_REQ_DT_TM,  #time the last bed request order was placed
+                      BED_ASSIGNED_DATE_TIME = BED_ASSIGN_DT_TM,  #time bed was assigned in the inpatient unit 
+                      MD_PAGED_DATE_TIME = MD_PAGED_DT_TM,  #time the MD was marked as paged (variable)
+                      MD_REPORT_DATE_TIME=MD_RPT_DT_TM,  #time MD report was clicked as completed
+                      TEAM_ASSIGNED_DATE_TIME=ADMIT_TREATMENT_START_DT, #time inpatient team assigned themselves to treatment team
+                      ADMIT_INPATIENT_DATE_TIME=CENSUS_ADMIT_TM,  #Admit to inpatient order time; proxy time pt arrived on the floor
+                      DISCHARGE_DATE_TIME=HOSP_DISCHRG_DT,
+                      DIAGNOSIS = ACCT_ADMIT_DX_NM, #diagnosis from the ED
+                      MRN = PAT_MRN_ID,  #patient Identifier
+                      TEAM_ED=ED_DISCH_TEAM,  #ED team who took care of this patient in ED
+                      INPATIENT_TEAM=ADMIT_TREATMENT_TEAM, #team who take care of the patient
+                      INPATIENT_FLOOR=CENSUS_ADMIT_DEPT,  #inpatient floor location where the patient was admitted 
+                      INPATIENT_SERVICE=CENSUS_ADMIT_SERVCIE  #inpatient team who admitted the patient
+                      )
 
 ED.clean<-ED.admits.r %>%
   dplyr::select(MRN,ARRIVAL_DATE_TIME, BED_REQUEST_DATE_TIME, BED_ASSIGNED_DATE_TIME, MD_PAGED_DATE_TIME, MD_REPORT_DATE_TIME, TEAM_ASSIGNED_DATE_TIME, ADMIT_INPATIENT_DATE_TIME, DISCHARGE_DATE_TIME, DIAGNOSIS,TEAM_ED,INPATIENT_FLOOR,INPATIENT_TEAM, INPATIENT_SERVICE)
@@ -117,13 +125,10 @@ ED.clean$INPATIENT_FLOOR<-as.character(ED.clean$INPATIENT_FLOOR)
 ED.clean$INPATIENT_TEAM<-as.character(ED.clean$INPATIENT_TEAM)
 ED.clean$INPATIENT_SERVICE<-as.character(ED.clean$INPATIENT_SERVICE)
 
-head(ED.clean)
-
 ## ADDITIONAL COLUMNS OF INTEREST:
 #Outcome durations of interest:  (1) Time of Bed request to MD report; (2) Time from MD report to arrival on the floor
 ED.clean$dur1.request.report<-difftime(ED.clean$MD_REPORT_DATE_TIME,ED.clean$BED_REQUEST_DATE_TIME, units="min")
 ED.clean$dur2.report.floor<-difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$MD_REPORT_DATE_TIME, units="min")
-#limitations: alot of times MD report is clicked right before the patient is sent up to the floor, so this number is probably falsely decreased
 ED.clean$dur.request.bedassign <- difftime(ED.clean$BED_ASSIGNED_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min")
 ED.clean$dur.bedassign.report <-difftime(ED.clean$MD_REPORT_DATE_TIME, ED.clean$BED_ASSIGNED_DATE_TIME, units="min")
 ED.clean$tot.dur<- difftime(ED.clean$ADMIT_INPATIENT_DATE_TIME, ED.clean$BED_REQUEST_DATE_TIME, units="min") 
@@ -134,8 +139,7 @@ ED.clean$timeofday= hour(ED.clean$BED_REQUEST_DATE_TIME)  #time of day the bed r
 ED.clean$monthofrequest=month(ED.clean$BED_REQUEST_DATE_TIME) #month the bed request was ordered
 ED.clean$bed_request_date=as.Date(ED.clean$BED_REQUEST_DATE_TIME)  #date the bed request was ordered (without time)
 ED.clean$discharge_date=as.Date(ED.clean$DISCHARGE_DATE_TIME)  #date the bed request was ordered (without time)
-ED.clean$dischargehour=hour(ED.clean$DISCHARGE_DATE_TIME)
-#number of total admission for that day 
+ED.clean$dischargehour=hour(ED.clean$DISCHARGE_DATE_TIME)  #number of total admission for that day 
 a=ED.clean %>%  #look through all ED admissions
   group_by(as.Date(BED_REQUEST_DATE_TIME)) %>%  #group bed requests by date
   summarise(tot_ED_admits.day=n())  #count the total # of bed requests per day; and spit out the number of ED admissions by day
@@ -155,7 +159,6 @@ ED.clean.3<-ED.clean.2b %>%   #get rid of outliers (if duration is outside range
   filter(dur.request.bedassign>0) %>% 
   filter(dur.bedassign.report>0) %>% #this only returns 25731 values (losing almost 8k values)
   return
-nrow(ED.clean.3)
 
 #convert durations from minutes to numeric to do calculations
 ED.clean.3$dur1.request.report<-as.integer(ED.clean.3$dur1.request.report)
@@ -163,32 +166,26 @@ ED.clean.3$dur2.report.floor<-as.integer(ED.clean.3$dur2.report.floor)
 ED.clean.3$dur.request.bedassign<-as.integer(ED.clean.3$dur.request.bedassign)
 ED.clean.3$dur.bedassign.report<-as.integer(ED.clean.3$dur.bedassign.report)
 ED.clean.3$tot.dur<-as.integer(ED.clean.3$tot.dur)
-head(ED.clean.3)
 
 ##Col4: Inpatient teams renamed
 #renaming IP teams:
 list1=c("","8S 21671, GP/PULM","9S 21668, GP/NEURO", "9S 72643, GP/NEURO/EPILEPSY", "ADOLESCENT RESIDENT 21669","BLUE RESIDENT 14467, ICS/GP","CARDIOLOGY 17802", "CARDIOLOGY, FLOC A", "CARDIOLOGY, FLOC B","CICU 42644, BLUE","CICU 42644, RED", "FLOC SURGICAL HOSPITALIST, 77707","GOLD COMPLEX-1 11929", "GOLD COMPLEX-2 11928","GREEN RESIDENT 21667, GI","HACU", "HPT A 11927","HPT B 11930","HPT C 11931", "MBU A 74051", "MBU B 74052","MEDICAL HOSPITALIST 10146, TEAM", "ONCOLOGY 15511, RESIDENT LIQUID","ONCOLOGY 72015, RESIDENT SOLID/NEURO","ONCOLOGY, BMT", "ONCOLOGY, LIQUID","ONCOLOGY, NEURO", "ONCOLOGY, SOLID","PCU, ORANGE (ACUTE)","PICU 19041, GREEN", "PICU 19053, RED","PICU 78485, PURPLE","PICU, YELLOW", "RED RESIDENT 21670, HEME/GP", "SSU-SEASONAL STAY UNIT 79427", "YELLOW RESIDENT 19966, ENDO/MET/RENAL", "NICU 15945, BLUE 1","NICU 72517, BLUE 2", "NICU BLUE 2" ,"NICU 25633, PURPLE 1", "NICU 72519, PURPLE 2","NICU 71317, ORANGE 1","NICU 71602, ORANGE 2","NICU 70330, RED","NICU 20132, GREEN","REHAB BLUE TEAM", "REHAB GREEN TEAM","REHAB RED TEAM","ONCO, LIQUID CONSULT")
-
 values1=c("none","8S Resident", "9S Resident", "9S Resident", "Adolescent Resident", "Blue Resident", "Cardiology Team", "Cardiology Team", "Cardiology Team","CICU", "CICU", "Surg Subspecialty", "Gold HPT Team", "Gold HPT Team", "GI Resident", "HACU", "HPT", "HPT","HPT","MBU", "MBU", "MHT", "Onco Resident", "Onco Resident", "Onco Hospitalist","Onco Hospitalist", "Onco Hospitalist", "Onco Hospitalist","PCU", "PICU Green","PICU Resident","PICU Resident" , "PICU Yellow" ,"Red Resident","SSU Resident", "Yellow Resident", "NICU Blue", "NICU Blue", "NICU Blue","NICU purple", "NICU purple","NICU orange", "NICU orange", "NICU red", "NICU green","Rehab","Rehab","Rehab" ,"Onco c/s")
+
 ED.clean.3<-ED.clean.3 %>%
   mutate(INP_TEAM_RENAMED = factor(INPATIENT_TEAM, levels=list1, labels=values1)) 
-
 ED.clean.3$INP_TEAM_RENAMED=as.character(ED.clean.3$INP_TEAM_RENAMED)
 
 ##4: Diagnoses Renamed
 #Distinct Diagnoses:  There are 3069 different ED diagnoses that were entered for admitted patients
 #Method: Find all respiratory diagnoses by looking for the words "asthma, respi or bronchiolitis"
-diag.resp=ED.admits.r %>%
-  dplyr::select(DIAGNOSIS) %>%
-  distinct(DIAGNOSIS) %>%
-  filter(grepl('asthma|respi|bronchiolitis', DIAGNOSIS, ignore.case = TRUE)) %>%
-  return
 
 a<-vector(); group.diag<-vector()
 #for loop: 
 # 1) finds all diagnoses that contain "asthma, respi, bronchiolitis, wheezing" and replaces it with "respiratory distress"
 # 2) finds all diagnoses containing "" replaces it with "GI distress"
 # 3) Finds all diagnoses containing "Sickle-cell, Hb-SS"  replaces it with "Sickle cell"
+# 4) finds all diagnoses containing "fractures"
 for(i in 1:nrow(ED.clean.3)){
   a<-grepl('asthma|respi|bronchiolitis|wheezing|dyspnea|shortness of breath', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE) #respiratory distress
   b<-grepl('sickle-cell|hb-ss', ED.clean.3$DIAGNOSIS[[i]], ignore.case = TRUE)  #sickle cell related illness
@@ -203,47 +200,40 @@ for(i in 1:nrow(ED.clean.3)){
   else{group.diag[i]<-ED.clean.3$DIAGNOSIS[i]}
 }
 ED.clean.3$grouped.diagnoses<-group.diag #add to the table of clean data
-
-
 ```
 
 
 HEADER: Visual Trends / Plots
 
 3. Visual Trends / Plots:
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 #Summary of numeric trends
-summary(ED.clean.3$tot.dur)  # median 117, mean 138min, bottom quartile is >164min
-summary(ED.clean.3$dur1.request.report)  #median 68, mean 85min, top 25% 107min, top quartile is <42min
-summary(ED.clean.3$dur2.report.floor) #median 38min, mean 53min, bottom quartile 67min;  (if it takes >1 hour from signout to going upstairs, not great)
-summary(ED.clean.3$dur.request.assigned) #median 26, mean 43min
+summary(ED.clean.3$tot.dur)  # median 117, mean 135min, bottom quartile is >164min
+summary(ED.clean.3$dur1.request.report)  #median 74, mean 92min, top 25% 107min, top quartile is <42min
+summary(ED.clean.3$dur2.report.floor) #median 32min, mean 43min, bottom quartile 67min;  (if it takes >1 hour from signout to going upstairs, not great)
+summary(ED.clean.3$dur.request.bedassign) #median 26, mean 43min
 summary(ED.clean.3$dur.bedassign.report) #median 38 min, mean 48
 ```
 
-##Questions:
+###Descriptive Analysis:
 ```{r}
 #Does duration vary from year to year?  No
-jpeg('plot1.jpg')
 plot<- ED.clean.3 %>%
   mutate(year=factor(year(bed_request_date), levels=c("2016","2017","2018"), labels=c("2016", "2017", "2018")))
 ggplot(data=plot, aes(x=year, y=tot.dur, group=year)) +
       geom_boxplot() +
       theme(axis.text.y = element_text(face="plain", size=10, angle=45))
-dev.off()
 
 #Does duration vary by month?
-pdf('plotmonth.pdf')
 plot<- ED.clean.3 %>%
   group_by(monthofrequest) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
-dev.off()
+
 #Boxplot
-pdf('plotmonthboxplot.pdf')
 ggplot(data=ED.clean.3, aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=dur2.report.floor, group=monthofrequest)) + geom_boxplot()+
    scale_x_discrete("month of bed request")
-dev.off()
+
 #averages
-pdf('plotmonthavg.pdf')
 ggplot()+
   geom_point(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean_tot,color="black",size=count))+
   geom_point(data=plot,aes(x=factor(monthofrequest,levels=c("1","2","3","4","5","6","7","8","9","10","11","12")), y=mean_dur1,color="green",size=count)) +
@@ -252,45 +242,27 @@ ggplot()+
         axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
   xlab("Month")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time vs Month")+
   scale_colour_manual(name = 'color', values=c('black','green','red'),labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
-dev.off()
 
-# Mark's test code
-plot_tmp = reshape2::melt(plot, id.vars = c("monthofrequest", "count"))
 
-group.colors = c(mean_tot = "black", mean_dur1 = "red", mean_dur2 = "green")
-
-ggplot(data = plot_tmp, aes(x = monthofrequest, y = value, size = count)) +
-  geom_point() +
-  scale_fill_manual(values = group.colors)
-
-#PLOT: Does Duration vary by Day of the Week
-pdf('plotweekdayboxplot.pdf')
+#Does Duration vary by Day of the Week
 weekdays<-c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 ggplot() +
   geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=weekdays), y=tot.dur)) + 
   xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
-  # geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=dur1.request.report))+
-  # geom_boxplot(data=ED.clean.3, aes(x=factor(dayofweek, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")), y=dur2.report.floor))+
-     #labels
-  #  scale_y_continuous("Wait time in Minutes", limits=c(0,1000))
-#ggplot(data=ED.clean.3, aes(x=dayofweek, y=tot.dur, group=dayofweek))+geom_boxplot()
-dev.off()
-
-pdf('plotweekday.pdf')
+  
 plot<- ED.clean.3 %>%
   group_by(dayofweek) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 ggplot()+
   geom_point(data=plot,aes(x=factor(dayofweek, levels=weekdays), y=mean_tot, size=count))+
   xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
-dev.off()
+
 #Plot:  Does Duration vary by Inpatient Bed Location?  
 plot1<-ED.clean.3 %>%
   group_by(INPATIENT_FLOOR) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
-plot1<-plot1[!plot1$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
+plot1<-plot1[!plot1$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (usually due to data quality issues)
 
-pdf('plotbedlocation.pdf')
 ggplot()+
   geom_point(data=plot1,aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot, size=count, color="black")) + 
   geom_point(data=plot1,aes(x=INPATIENT_FLOOR, y=mean_dur1, color="green")) +
@@ -299,34 +271,23 @@ ggplot()+
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
       xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor ")+
   scale_colour_manual(name = 'color', values =c('black','green','red'), labels = c('total wait time','bed request to MD report', 'MD report to arrival to floor'))
-dev.off()
 
-pdf('plotbedlocation2.pdf')
-ggplot(data=plot1,
-       aes(x=reorder(INPATIENT_FLOOR,-mean_tot), y=mean_tot)) + geom_point() +
-       theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
-             axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
-       xlab("Inpatient Floor")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Floor")
-dev.off
-
-#Plot:  Does duration vary by Inpatient Team? Yes
-plot2 <-ED.clean.3 %>%
+#Plot:  Does duration vary by Inpatient Team? 
+plot <-ED.clean.3 %>%
   group_by(INP_TEAM_RENAMED) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n()) %>%
   arrange(desc(mean_tot)) %>%
   return
 
-#Inpatient TEAM  plot
-pdf('plotteam.pdf')
 ggplot()+
-  geom_point(data=plot2,aes(x=reorder(INP_TEAM_RENAMED,-mean_tot), y=mean_tot, size=count, color="black")) + 
-  geom_point(data=plot2,aes(x=INP_TEAM_RENAMED, y=mean_dur1, color="green")) +
-  geom_point(data=plot2,aes(x=INP_TEAM_RENAMED, y=mean_dur2,color="red")) +
+  geom_point(data=plot,aes(x=reorder(INP_TEAM_RENAMED,-mean_tot), y=mean_tot, size=count, color="black")) + 
+  #geom_point(data=plot,aes(x=INP_TEAM_RENAMED, y=mean_dur1, color="green")) +
+  #geom_point(data=plot,aes(x=INP_TEAM_RENAMED, y=mean_dur2,color="red")) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45, hjust=1)) +
       xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")+
   scale_colour_manual(name = 'colour', values =c('black','green','red'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
-dev.off()
+
 
 #Inpatient Boxplot
 pdf('plotteam2.pdf')
@@ -335,81 +296,73 @@ ggplot(data=ED.clean.3, aes(x=INP_TEAM_RENAMED, y=tot.dur, group=INP_TEAM_RENAME
    theme(axis.text.x = element_text(face="plain", color="#993333",size=10, angle=65, hjust = 1)) +
   xlab("Inpatient Admit Team")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Inpatient Admit Team")
 dev.off()
-#Does wait time vary by service?
 
-plot8 <-ED.clean.3 %>%
+#Does wait time vary by service?
+plot <-ED.clean.3 %>%
   group_by(INPATIENT_SERVICE) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
-plot8<-plot8[!plot8$count<2,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
+plot<-plot[!plot$count<5,] #takes out the outlier teams where the floor only has <5 pts admitted (indicating error)
 
-
-pdf('plotservice.pdf')
-ggplot(data=plot8, aes(x=reorder(INPATIENT_SERVICE,-mean_tot), y=mean_tot)) +geom_point() +
+ggplot(data=plot, aes(x=reorder(INPATIENT_SERVICE,-mean_tot), y=mean_tot)) +geom_point() +
    ggtitle("ED Wait Time vs Service Team") +
    theme(axis.text.x = element_text(face="plain", color="#993333",size=8, angle=65, hjust = 1)) +
   xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
 
+#boxplot
 ggplot(data=ED.clean.3, aes(x=INPATIENT_SERVICE, y=tot.dur, group=INPATIENT_SERVICE)) +geom_boxplot() +
    ggtitle("ED Wait Time vs Service Team") +
    theme(axis.text.x = element_text(face="plain", color="#993333",size=8, angle=65, hjust = 1)) +
   xlab("Inpatient Service")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Service")
-dev.off()
-#Does it vary by time of day that the admission bed request was placed?  yes
-plot3<-ED.clean.3 %>%
+
+#Does wait time vary by time of day that the admission bed request was placed?
+plot<-ED.clean.3 %>%
   group_by(timeofday) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), patients=n())
 
-pdf('plottimeofday.pdf')
-ggplot()+geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_tot, color="black",size=patients)) +
-  geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur1, color="green", size=patients)) +
-  geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur2, color="red", size=patients)) +
+ggplot()+geom_point(data=plot, aes(x=reorder(timeofday,+timeofday), y=mean_tot, color="black")) +
+  #geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur1, color="green", size=patients)) +
+  #geom_point(data=plot3, aes(x=reorder(timeofday,+timeofday), y=mean_dur2, color="red", size=patients)) +
   theme(axis.text.x = element_text(face="plain", color="#993333", size=9, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=9, angle=60, hjust=1)) +
   xlab("Time of Bed Request (hour)") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Hour of Bed Request")+
     scale_colour_manual(name = 'colour', values =c('black','green','red'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
-#  scale_colour_manual(name = 'colour', values =c('black'='black','red'='red','green'='green'), labels = c('c2','c1','c3'))
-dev.off()
-#Does it vary by diagnosis?
-plot4 <- ED.clean.3 %>%
+
+#Does wait time vary by diagnosis?
+plot <- ED.clean.3 %>%
   group_by(grouped.diagnoses) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
-plot4<-plot4[plot4$count>100,]
+plot<-plot[plot$count>100,]
 ggplot()+
-  geom_point(data=plot4,aes(x=reorder(grouped.diagnoses,-mean_tot),y=mean_tot, color="black",size=count))  +
-  geom_point(data=plot4,aes(x=grouped.diagnoses, y=mean_dur1, color="green",size=count)) +
-  geom_point(data=plot4,aes(x=grouped.diagnoses, y=mean_dur2, color="red",size=count)) +
+  geom_point(data=plot,aes(x=reorder(grouped.diagnoses,-mean_tot),y=mean_tot, color="black",size=count))  +
+  geom_point(data=plot,aes(x=grouped.diagnoses, y=mean_dur1, color="green",size=count)) +
+  geom_point(data=plot,aes(x=grouped.diagnoses, y=mean_dur2, color="red",size=count)) +
        theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45)) +
       xlab("Diagnosis") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs Diagnosis")+
   scale_colour_manual(name = 'colour', values =c('black','green','red'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
 
 #Is wait time related to # of Bed Requests made that day?
-pdf('plotbedrequests')
-  plot7 <- ED.clean.3 %>%
+  plot <- ED.clean.3 %>%
   group_by(tot_ED_admits.day) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
 ggplot()+
-  geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_tot))+
+  geom_point(data=plot,aes(x=tot_ED_admits.day, y=mean_tot))+
   #geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_dur1, color="red"))+
   #geom_point(data=plot7,aes(x=tot_ED_admits.day, y=mean_dur2, color="green"))+
        theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))+
   xlab("# Admission Requests / day") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs # of ED Admission Requests")
- # scale_colour_manual(name = 'color', values =c('black','red','green'), labels = c('total wait time','bed request to MD report','MD report to arrival to floor'))
-dev.off()
 
 #does wait time vary by num of discharges that day?
- plot <- ED.clean.3 %>%
+plot <- ED.clean.3 %>%
   group_by(tot_discharges) %>%
   summarise(mean_tot=mean(tot.dur), mean_dur1=mean(dur1.request.report), mean_dur2=mean(dur2.report.floor), count=n())
-pdf('plotdischarges.pdf')
 ggplot()+
   geom_point( data=plot, aes(x = tot_discharges, y = mean_tot, size=count))+
   theme(axis.text.x = element_text(face="plain", color="#993333", size=6, angle=70, hjust=1),
         axis.text.y = element_text(face="plain", color="#993333",size=6, angle=45))+
   xlab("# Total Discharges / day") + ylab("Average Wait Time (min)") +ggtitle("Wait Time vs # of Discharges inpatient")
-dev.off()
-#Is Duration related to total ED bed requests that day
+
 ```
 
 Regression:
@@ -430,7 +383,7 @@ summary((lm(tot.dur ~ monthofrequest, data=ED.clean.3, family=binomial()))) #no
 #summary((lm(tot.dur ~ grouped.diagnoses, data=ED.clean.3, family=binomial()))) #no
 #summary((lm(tot.dur ~ bed_request_date, data=ED.clean.3, family=binomial())))
 
-#multivariable continuous regression
+#multivariate continuous regression
 summary((lm(tot.dur~ TEAM_ED + INPATIENT_FLOOR + INPATIENT_SERVICE + dayofweek + timeofday + monthofrequest + bed_request_date + tot_ED_admits.day + tot_discharges +INP_TEAM_RENAMED, data=ED.clean.3, family=binomial(logit))))
 head(ED.clean.3)
 
@@ -496,7 +449,7 @@ ggplot()+
       geom_point(data=plot, aes(x=timeofday, y=mean_tot, size=count))+
        theme(axis.text.x = element_text(face="plain", color="#993333", size=10, angle=60, hjust=1),
              axis.text.y = element_text(face="plain", color="#993333", size=10, angle=45))+
-       xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by Day of the Week")
+       xlab("Day of the Week")+ ylab("Avg Wait Time (min)")+ ggtitle("Wait Time by hour")
 
 
 #By 
@@ -606,7 +559,7 @@ data.ED.svm<- ED.clean.3 %>%
   dplyr::select(tot.dur, TEAM_ED, INPATIENT_FLOOR, INPATIENT_SERVICE, dayofweek, timeofday,monthofrequest, tot_ED_admits.day, tot_discharges, INP_TEAM_RENAMED) %>%
   mutate(tot.dur = cut(tot.dur, breaks=c(0, 140, 1000), labels=c("control", "outlier")))
 #data.ED.svm$poop<-as.character(data.ED.svm$poop)
-str(data.ED.svm)
+
 data.ED.svm<-na.exclude(data.frame(data.ED.svm)) #exclude all NA variables
 data.ED.svm$TEAM_ED<- as.factor(data.ED.svm$TEAM_ED)
 data.ED.svm$INPATIENT_FLOOR<-as.factor(data.ED.svm$INPATIENT_FLOOR)
@@ -619,7 +572,7 @@ data.ED.svm$tot_discharges<-as.numeric(data.ED.svm$tot_discharges)
 data.ED.svm$INP_TEAM_RENAMED<-as.factor(data.ED.svm$INP_TEAM_RENAMED)
 str(data.ED.svm)
 
-ED.svm<- svm(tot.dur ~ TEAM_ED + INPATIENT_FLOOR + INPATIENT_SERVICE+ dayofweek + timeofday + monthofrequest + tot_ED_admits.day + tot_discharges + INP_TEAM_RENAMED, data=data.ED.svm, scale=TRUE, kernel="radial") #polynomial, radial did not find any outliers, did not fit the data well
+ED.svm<- svm(tot.dur ~., data=data.ED.svm, scale=TRUE, kernel="radial") #polynomial, radial did not find any outliers, did not fit the data well
 ED.svm
 ED.svm.pred1<-fitted(ED.svm)
 str(ED.svm.pred1)
@@ -644,6 +597,48 @@ print(gini.val)
 print("Best Gini variables were: V1, V23, V50, V100")
 data.hw.rf.pred <- predict(data.hw.rf, data.hw, type="prob")
 rf.pred <- data.hw.rf.pred[, 2]  #predicted values based on all of the data
+
+
+#10 fold cross validation
+library(glmnet)
+N = nrow(data.ED.svm) 
+K = 10
+set.seed(1234)
+s = sample(1:K, size=N, replace=T)  #separates observations into a group of 10
+pred.outputs.glm <- vector(mode="numeric", length=N)
+pred.outputs.rf <- vector(mode="numeric", length=N)
+obs.outputs <- vector(mode="numeric", length=N)
+offset <- 0
+
+for(i in 1:K){
+	train.hw <- filter(data.ED.svm, s != i)  #want to store observed output for all 10 runs of the loop
+	test.hw <- filter(data.ED.svm, s == i)
+    obs.outputs[1:length(s[s==i]) + offset] <- data.ED.svm$status  #length of test data
+    
+    #GLM train/test
+	glm <- glm(status~., data=train.hw, family=binomial(logit))  #1. prediction model 
+    glm.pred.curr <- predict(glm, test.hw, type="response")  #2. These are predictions.  Based on my training data, give it test variables ONLY what do you predict the "status" to be?
+    pred.outputs.glm[1:length(s[s==i]) + offset] <- glm.pred.curr #storing the predictions in a large table
+
+    #Random Forest train/test
+  hw.rf <- randomForest(status~., data=train.hw, ntree=100)
+  rf.pred.curr <- predict(hw.rf, newdata=test.hw, type="prob")
+  pred.outputs.rf[1:length(s[s==i]) + offset] <- rf.pred.curr[,2]
+
+	offset <- offset + length(s[s==i])
+}
+
+#AUC for GLM
+library(pROC)
+roc(obs.outputs, pred.outputs.glm, ci=TRUE)  #gives you AUC
+plot.roc(data.hw$status, glm.pred, ci=TRUE)  #compare apples to apples (true data, compared to predicted data that used 100% of variables)
+plot.roc(obs.outputs, pred.outputs.glm, col="red", add=TRUE)
+
+#random forest
+roc(obs.outputs, pred.outputs.rf, ci=TRUE)  #
+plot.roc(data.hw$status, rf.pred, add=TRUE)  #training ROC curve
+plot.roc(obs.outputs, pred.outputs.rf, ci=TRUE, col="green", add=TRUE)  #cross validation or test data ROC curve
+legend("bottomright", legend=c("Training GLM", "Cross-Validation GLM", "Training RF", "Cross-validcation RF"), col=c("black", "red", "black", "green"), lwd=2)
 
 ```
 
